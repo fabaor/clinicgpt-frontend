@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Busca de passagens aéreas</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="brand"><span aria-hidden="true">✈️</span> Passagens</span>
+      <span id="demoBadge" class="badge" hidden>modo demonstração</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <form id="searchForm" class="card search" autocomplete="off">
+      <div class="row row-top">
+        <div class="segmented" role="radiogroup" aria-label="Tipo de viagem">
+          <label><input type="radio" name="trip" value="one-way" checked /><span>Só ida</span></label>
+          <label><input type="radio" name="trip" value="round-trip" /><span>Ida e volta</span></label>
+        </div>
+
+        <label class="field compact">
+          <span class="label">Classe</span>
+          <select name="seat">
+            <option value="economy">Econômica</option>
+            <option value="premium-economy">Econômica premium</option>
+            <option value="business">Executiva</option>
+            <option value="first">Primeira classe</option>
+          </select>
+        </label>
+
+        <div class="field compact">
+          <span class="label">Passageiros</span>
+          <button type="button" class="control" id="passengersToggle" aria-expanded="false">
+            <span id="passengersSummary">1 adulto</span>
+          </button>
+          <div class="popover" id="passengersPanel" hidden>
+            <div class="counter">
+              <div><strong>Adultos</strong><small>12 anos ou mais</small></div>
+              <div class="stepper">
+                <button type="button" data-step="adults" data-delta="-1" aria-label="Menos adultos">−</button>
+                <output name="adults">1</output>
+                <button type="button" data-step="adults" data-delta="1" aria-label="Mais adultos">+</button>
+              </div>
+            </div>
+            <div class="counter">
+              <div><strong>Crianças</strong><small>2 a 11 anos</small></div>
+              <div class="stepper">
+                <button type="button" data-step="children" data-delta="-1" aria-label="Menos crianças">−</button>
+                <output name="children">0</output>
+                <button type="button" data-step="children" data-delta="1" aria-label="Mais crianças">+</button>
+              </div>
+            </div>
+            <div class="counter">
+              <div><strong>Bebês no assento</strong><small>até 2 anos</small></div>
+              <div class="stepper">
+                <button type="button" data-step="infants_in_seat" data-delta="-1" aria-label="Menos bebês no assento">−</button>
+                <output name="infants_in_seat">0</output>
+                <button type="button" data-step="infants_in_seat" data-delta="1" aria-label="Mais bebês no assento">+</button>
+              </div>
+            </div>
+            <div class="counter">
+              <div><strong>Bebês no colo</strong><small>até 2 anos</small></div>
+              <div class="stepper">
+                <button type="button" data-step="infants_on_lap" data-delta="-1" aria-label="Menos bebês no colo">−</button>
+                <output name="infants_on_lap">0</output>
+                <button type="button" data-step="infants_on_lap" data-delta="1" aria-label="Mais bebês no colo">+</button>
+              </div>
+            </div>
+            <p class="hint">Máximo de 9 passageiros, com um adulto por bebê no colo.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row row-main">
+        <div class="field grow" data-combobox>
+          <label class="label" for="from_airport">Origem</label>
+          <input id="from_airport" name="from_airport" class="control" placeholder="Cidade ou código (GRU)"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="from_airport-list" required />
+          <ul class="suggestions" id="from_airport-list" role="listbox" hidden></ul>
+        </div>
+
+        <button type="button" id="swap" class="swap" title="Inverter origem e destino" aria-label="Inverter origem e destino">⇄</button>
+
+        <div class="field grow" data-combobox>
+          <label class="label" for="to_airport">Destino</label>
+          <input id="to_airport" name="to_airport" class="control" placeholder="Cidade ou código (JFK)"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="to_airport-list" required />
+          <ul class="suggestions" id="to_airport-list" role="listbox" hidden></ul>
+        </div>
+
+        <label class="field">
+          <span class="label">Ida</span>
+          <input type="date" name="depart_date" class="control" required />
+        </label>
+
+        <label class="field" id="returnField" hidden>
+          <span class="label">Volta</span>
+          <input type="date" name="return_date" class="control" />
+        </label>
+      </div>
+
+      <details class="filters">
+        <summary>Filtros avançados</summary>
+        <div class="row row-filters">
+          <label class="field">
+            <span class="label">Escalas</span>
+            <select name="max_stops">
+              <option value="">Qualquer</option>
+              <option value="0">Sem escalas</option>
+              <option value="1">Até 1 escala</option>
+              <option value="2">Até 2 escalas</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Moeda</span>
+            <select name="currency">
+              <option value="BRL">BRL (R$)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="ARS">ARS</option>
+              <option value="CLP">CLP</option>
+              <option value="MXN">MXN</option>
+              <option value="JPY">JPY (¥)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Preço máx.</span>
+            <input type="number" name="max_price" class="control" min="1" step="1" placeholder="sem limite" />
+          </label>
+          <label class="field">
+            <span class="label">Bagagem de mão</span>
+            <input type="number" name="carry_on_bags" class="control" min="0" max="9" value="0" />
+          </label>
+          <label class="field">
+            <span class="label">Bagagem despachada</span>
+            <input type="number" name="checked_bags" class="control" min="0" max="9" value="0" />
+          </label>
+          <label class="field">
+            <span class="label">Partir a partir de</span>
+            <select name="earliest_departure_hour">
+              <option value="">Qualquer hora</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Partir até</span>
+            <select name="latest_departure_hour">
+              <option value="">Qualquer hora</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Duração máx. (h)</span>
+            <input type="number" name="max_duration_hours" class="control" min="1" max="99" step="1" placeholder="sem limite" />
+          </label>
+          <label class="field grow">
+            <span class="label">Companhias ou alianças</span>
+            <input name="airlines" class="control" placeholder="LATAM, G3, ONEWORLD…" />
+          </label>
+        </div>
+        <div class="row row-checks">
+          <label class="check"><input type="checkbox" name="exclude_basic_economy" /> Excluir tarifas básicas</label>
+          <label class="check"><input type="checkbox" name="hide_separate_and_self_transfer" /> Ocultar bilhetes separados e autoconexões</label>
+          <label class="check"><input type="checkbox" name="less_emissions_only" /> Só voos com menos emissões</label>
+        </div>
+      </details>
+
+      <div class="row row-submit">
+        <button type="submit" class="primary" id="submitButton">Buscar voos</button>
+      </div>
+    </form>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="results" hidden>
+      <div class="results-head">
+        <div>
+          <h2 id="resultsTitle"></h2>
+          <p id="resultsNotice" class="hint" hidden></p>
+        </div>
+        <div class="results-actions">
+          <label class="field compact">
+            <span class="label">Ordenar por</span>
+            <select id="sort">
+              <option value="price">Menor preço</option>
+              <option value="duration">Menor duração</option>
+              <option value="stops">Menos escalas</option>
+              <option value="departure">Partida mais cedo</option>
+            </select>
+          </label>
+          <a id="googleLink" class="ghost" href="#" target="_blank" rel="noopener noreferrer">Abrir no Google Flights ↗</a>
+        </div>
+      </div>
+      <ul id="resultsList" class="results"></ul>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p>
+      Dados obtidos do Google Flights pela biblioteca
+      <a href="https://github.com/AWeirdDev/flights" target="_blank" rel="noopener noreferrer">fast-flights</a>.
+      Preços são estimativas — confirme na companhia antes de comprar.
+    </p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

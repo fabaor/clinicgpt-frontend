@@ -1,0 +1,73 @@
+code,name,country,aliases,airports
+AKL,Auckland,NZ,,AKL MHB
+AMS,Amsterdã,NL,Amsterdam,AMS
+ATH,Atenas,GR,Athens|Athina,ATH
+AUH,Abu Dhabi,AE,,AUH AYM AZI DHF
+BCN,Barcelona,ES,,BCN
+BER,Berlim,DE,Berlin,BER SXF TXL
+BHZ,Belo Horizonte,BR,,CNF PLU
+BJS,Pequim,CN,Beijing|Peking,NAY PEK PKX
+BKK,Bangcoc,TH,Bangkok,BKK DMK
+BOG,Bogotá,CO,Bogota,BOG
+BOM,Mumbai,IN,Bombaim,BOM
+BRU,Bruxelas,BE,Brussels|Bruxelles,BRU CRL
+BSB,Brasília,BR,,BSB
+BUE,Buenos Aires,AR,,AEP EZE
+CAI,Cairo,EG,,CAI
+CHI,Chicago,US,,CGX CHI DPA MDW NOH ORD PWK RFD
+CPH,Copenhague,DK,Copenhagen|Kobenhavn,CPH RKE
+CWB,Curitiba,BR,,CWB
+DEL,Nova Délhi,IN,New Delhi|Delhi,DEL
+DOH,Doha,QA,,DOH
+DUB,Dublin,IE,,DUB
+DXB,Dubai,AE,,DCG DWC DXB NHD
+FOR,Fortaleza,BR,,FOR
+FRA,Frankfurt,DE,,FRA HHN QGV
+HEL,Helsinque,FI,Helsinki,HEL HEM HEN
+HKG,Hong Kong,HK,,HHP HKG XJH
+HOU,Houston,US,,AAP DWH EFD HOU IAH IWS JGP JGQ JMA JPT JWH JWL SPX
+IST,Istambul,TR,Istanbul,ISL IST SAW
+JKT,Jacarta,ID,Jakarta,CGK HLP
+JNB,Joanesburgo,ZA,Johannesburg,GCJ HLA JNB QRA
+KUL,Kuala Lumpur,MY,,KUL SZB
+LAX,Los Angeles,US,,CCD JCX JID JLX JSN JUC LAX VNY WHP
+LIM,Lima,PE,,LIM
+LIS,Lisboa,PT,Lisbon,LIS ZYD
+LON,Londres,GB,London,BQH LCY LGW LHR LTN SEN STN XOF
+MAD,Madri,ES,Madrid,MAD TOJ
+MAO,Manaus,BR,,MAO
+MEL,Melbourne,AU,,AVV KAH MBW MEB MEL
+MEX,Cidade do México,MX,Mexico City|Ciudad de Mexico,AZP MEX NLU TLC
+MIA,Miami,US,,JDM MIA MPB OPF TMB TNT
+MIL,Milão,IT,Milan|Milano,BGY LIN MXP PMF
+MNL,Manila,PH,,MNL SGL
+MOW,Moscou,RU,Moscow|Moskva,BKA DME MOW SVO VKO ZIA
+MUC,Munique,DE,Munich|Munchen,AGB MUC
+NYC,Nova York,US,New York,EWR FLU JFK JRA JRB JRE LGA NBP NES NWS QNY TSS WTC XNY
+OPO,Porto,PT,Oporto,OPO
+OSA,Osaka,JP,,ITM KIX UKB
+OSL,Oslo,NO,,OSL RYG TRF ZZN
+PAR,Paris,FR,,BVA CDG JDP JPU LBG ORY POX VIY XCR XEX XTT
+POA,Porto Alegre,BR,,POA
+PTY,Cidade do Panamá,PA,Panama City,PAC PTY
+REC,Recife,BR,,REC
+RIO,Rio de Janeiro,BR,,GIG SDU
+ROM,Roma,IT,Rome,CIA FCO
+SAO,São Paulo,BR,,CGH GRU VCP
+SCL,Santiago,CL,,SCL ULC
+SEL,Seul,KR,Seoul,GMP ICN SSN
+SGN,Ho Chi Minh,VN,Ho Chi Minh City|Saigon,SGN
+SHA,Xangai,CN,Shanghai,PVG SHA
+SIN,Singapura,SG,Singapore,QPG SIN XSP
+SSA,Salvador,BR,,SSA
+STO,Estocolmo,SE,Stockholm,ARN BMA NYO VST
+SYD,Sydney,AU,,BWU LBH RSE SYD
+TLV,Tel Aviv,IL,,SDV TLV
+TPE,Taipé,TW,Taipei,TPE TSA
+TYO,Tóquio,JP,Tokyo|Tokio,HND NRT OKO
+VIE,Viena,AT,Vienna|Wien,VIE
+WAS,Washington,US,,BOF BZS DCA IAD JPN
+YMQ,Montreal,CA,Montréal,YHU YMX YUL
+YTO,Toronto,CA,,YHM YKZ YTZ YYZ
+YVR,Vancouver,CA,,CXH YDT YVR
+ZRH,Zurique,CH,Zurich|Zürich,ZRH
