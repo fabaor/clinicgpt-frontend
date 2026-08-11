@@ -1,0 +1,18 @@
+# NUNCA comitar: cookies da sessao, dao acesso a conta paga do MemberKit
+auth.json
+
+# Dependencias
+node_modules/
+
+# Midia baixada (pesada, e conteudo do curso pago - nao vai para o repo)
+audios/
+
+# Saidas intermediarias do mapeamento
+catalogo.json
+links-descobertos.json
+relatorio-download.json
+
+# Transcricoes tambem sao conteudo do curso: ficam so no seu Mac.
+# Se quiser versionar os RESUMOS que voce mesmo gerou, remova a linha abaixo.
+transcricoes/
+resumos/

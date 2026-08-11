@@ -1,0 +1,16 @@
+{
+  "name": "audio-aulas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Baixa, transcreve e resume os audios das aulas do MemberKit",
+  "scripts": {
+    "login": "node 1-login.mjs",
+    "mapear": "node 2-mapear.mjs",
+    "sniff": "node 2-mapear.mjs --sniff",
+    "baixar": "node 3-baixar.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}
