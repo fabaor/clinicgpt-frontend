@@ -6,7 +6,9 @@ e a busca em si, que consulta o Google Flights via `fast_flights`.
 
 from __future__ import annotations
 
+import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
@@ -20,10 +22,34 @@ from . import airports, demo, search
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
+logger = logging.getLogger("uvicorn.error")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Avisa quando a biblioteca instalada não tem os filtros do repositório.
+
+    Instalar do repositório por cima de uma versão do PyPI falha em silêncio:
+    o repositório ainda declara `version = "3.0.2"`, igual à publicada, então
+    o pip trata o requisito como satisfeito e não substitui nada. Sem este
+    aviso, a aplicação roda com menos filtros sem ninguém perceber.
+    """
+    if search.missing_features():
+        logger.warning(
+            "fast-flights instalado sem os filtros novos (provavelmente a "
+            "versão do PyPI). A busca funciona, mas preço máximo, bagagens, "
+            "janela de horário e duração serão ignorados. Para corrigir: "
+            "pip install --force-reinstall --no-deps -r requirements.txt"
+        )
+
+    yield
+
+
 app = FastAPI(
     title="Busca de passagens aéreas",
     description="Interface web para o scraper fast-flights (Google Flights).",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 

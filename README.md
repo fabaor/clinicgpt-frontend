@@ -79,15 +79,48 @@ python scripts/build_airport_data.py
 
 ## Versão do fast-flights
 
-O `requirements.txt` instala a biblioteca a partir do repositório, e não do
-PyPI. A versão publicada (3.0.2) só aceita `max_stops` e `airlines`; os demais
-filtros — preço máximo, bagagens, janela de horário, duração, tarifas básicas,
-autoconexões e emissões — só existem no código do repositório.
+O `requirements.txt` instala a biblioteca a partir do repositório, com o commit
+fixado, e não do PyPI. A versão publicada (3.0.2, de junho/2026) só aceita
+`max_stops` e `airlines`; os demais filtros — preço máximo, bagagens, janela de
+horário, duração, tarifas básicas, autoconexões e emissões — foram adicionados
+depois e só existem no código do repositório.
 
-O backend descobre em tempo de execução quais filtros a versão instalada
-conhece e descarta os outros, devolvendo os nomes em `unsupported_filters` para
-a interface avisar. Ou seja: com a versão do PyPI a aplicação continua
-funcionando, apenas com menos filtros.
+**Cuidado com uma armadilha:** o repositório ainda declara `version = "3.0.2"`,
+o mesmo número da versão publicada. Se você já tem o pacote do PyPI instalado,
+o `pip install -r requirements.txt` considera o requisito satisfeito e **não
+troca nada, sem emitir aviso** — nem com `--upgrade`, nem fixando o commit. Só
+`--force-reinstall` resolve:
+
+```bash
+pip install --force-reinstall --no-deps -r requirements.txt
+```
+
+Num ambiente virtual novo isso não acontece: a instalação normal já traz a
+versão do repositório.
+
+Para conferir qual versão está valendo:
+
+```bash
+python -c "import inspect, fast_flights as f; \
+print('filtros novos:', 'max_price' in inspect.signature(f.create_query).parameters)"
+```
+
+A aplicação também avisa sozinha: o backend descobre em tempo de execução quais
+filtros a versão instalada conhece, registra um aviso no log ao iniciar se
+faltarem, descarta os não suportados e devolve os nomes em
+`unsupported_filters` para a interface mostrar. Com a versão do PyPI a busca
+continua funcionando, apenas com menos filtros.
+
+Para atualizar o commit fixado quando o repositório receber correções:
+
+```bash
+pip install --force-reinstall --no-deps "fast-flights @ git+https://github.com/AWeirdDev/flights.git"
+pip freeze | grep fast-flights    # copie o commit novo para o requirements.txt
+```
+
+Vale saber ainda que o `fast_flights` importa `typing_extensions` sem declará-lo
+como dependência — instalado sozinho, ele quebra no import. Por isso o pacote
+aparece explicitamente no `requirements.txt`.
 
 ## Estrutura
 

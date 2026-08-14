@@ -1,7 +1,20 @@
-# A versão do PyPI (3.0.2) só aceita os filtros max_stops e airlines; preço
-# máximo, bagagens, janela de horário, duração e afins só existem no
-# repositório. O backend funciona com as duas — veja o README.
-fast-flights @ git+https://github.com/AWeirdDev/flights.git
+# fast-flights vem do repositório, não do PyPI: a versão publicada (3.0.2, de
+# junho/2026) só aceita os filtros max_stops e airlines. Preço máximo,
+# bagagens, janela de horário, duração e afins existem só no repositório.
+#
+# O commit está fixado para a instalação ser reprodutível. Para atualizar:
+#   pip install --force-reinstall --no-deps "fast-flights @ git+https://github.com/AWeirdDev/flights.git"
+#   pip freeze | grep fast-flights      # copie o novo commit para cá
+#
+# ATENÇÃO: se você já tem fast-flights 3.0.2 do PyPI instalado, este arquivo
+# não substitui a instalação — o repositório ainda declara `version = "3.0.2"`,
+# então o pip considera o requisito satisfeito e não faz nada, sem avisar. Use
+# `--force-reinstall` nesse caso; o README explica como conferir.
+fast-flights @ git+https://github.com/AWeirdDev/flights.git@229bc851a161752787a7f69813a77d570fe58911
+
+# O fast_flights importa typing_extensions mas não o declara como dependência;
+# sem esta linha a instalação depende de outro pacote trazê-lo por acaso.
+typing_extensions>=4.0
 
 fastapi>=0.115
 uvicorn[standard]>=0.30

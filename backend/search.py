@@ -32,6 +32,20 @@ def _accepted(target: Callable[..., Any]) -> frozenset[str]:
 QUERY_FEATURES = _accepted(create_query)
 LEG_FEATURES = _accepted(FlightQuery.__init__)
 
+# Filtros que só existem no repositório, usados para detectar uma instalação
+# vinda do PyPI. `max_price` está em create_query e `max_duration_minutes` em
+# FlightQuery, então um de cada lado cobre as duas assinaturas.
+def missing_features() -> list[str]:
+    """Filtros do repositório que a versão instalada não tem."""
+    ausentes = []
+
+    if "max_price" not in QUERY_FEATURES:
+        ausentes.append("max_price")
+    if "max_duration_minutes" not in LEG_FEATURES:
+        ausentes.append("max_duration_minutes")
+
+    return ausentes
+
 
 def _supported(
     values: dict[str, Any], features: frozenset[str], dropped: set[str]
