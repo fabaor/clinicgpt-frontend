@@ -104,7 +104,7 @@ page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`))
 
 const step = (name) => console.log(`  ${name}`)
 
-/** PNG 8x8 cinza, montado à mão para o teste não depender de nenhum arquivo. */
+/** PNG cinza montado à mão, com um quadrado escuro no meio para a silhueta ter o que traçar. */
 function pngDeTeste() {
   const crcTabela = []
   for (let n = 0; n < 256; n++) {
@@ -126,19 +126,22 @@ function pngDeTeste() {
     return Buffer.concat([tamanho, corpo, checagem])
   }
 
-  const lado = 8
+  const lado = 64
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(lado, 0)
   ihdr.writeUInt32BE(lado, 4)
   ihdr[8] = 8 // bits por canal
   ihdr[9] = 0 // escala de cinza
 
-  // Uma faixa escura no meio, para a imagem não ser uniforme.
+  // Quadrado escuro centrado: forma única, fechada, longe das bordas.
   const linhas = []
   for (let y = 0; y < lado; y++) {
     const linha = Buffer.alloc(lado + 1)
     linha[0] = 0 // sem filtro
-    linha.fill(y > 2 && y < 6 ? 0x20 : 0xe0, 1)
+    for (let x = 0; x < lado; x++) {
+      const dentro = x >= 16 && x < 48 && y >= 16 && y < 48
+      linha[x + 1] = dentro ? 0x20 : 0xe8
+    }
     linhas.push(linha)
   }
   const comprimido = zlibSync(Buffer.concat(linhas))
@@ -280,6 +283,56 @@ try {
   // Anexos limpam após o envio, para a foto não grudar no próximo pedido.
   if ((await page.locator('.anexo').count()) !== 0) {
     throw new Error('as miniaturas continuaram na tela depois de gerar')
+  }
+
+  // Silhueta → extrusão: traçado local, sem chamar a API.
+  await page.setInputFiles('.anexos__input', {
+    name: 'logotipo.png',
+    mimeType: 'image/png',
+    buffer: pngDeTeste(),
+  })
+  await page.locator('.anexo img').waitFor({ timeout: 10000 })
+  await page.getByRole('button', { name: 'Traçar silhueta' }).click()
+  await page.locator('.silhueta__previa').waitFor({ timeout: 10000 })
+  await page.waitForTimeout(800)
+
+  const resumo = await page.locator('.silhueta .hint').first().innerText()
+  step(`traçado: ${resumo.replace(/\s+/g, ' ')}`)
+  if (!/contorno/.test(resumo)) throw new Error(`o painel não traçou nada: "${resumo}"`)
+
+  await page.getByRole('button', { name: 'Usar esta silhueta' }).click()
+  await page.waitForFunction(
+    () => document.querySelector('.stage__title')?.textContent?.startsWith('Silhueta:'),
+    { timeout: 15000 },
+  )
+  await page.waitForTimeout(1200)
+
+  const silhueta = await dimensions.innerText()
+  step(`peça da silhueta: ${silhueta.replace(/\s+/g, ' ')}`)
+  // O quadrado ocupa metade da imagem; com 60 mm de largura alvo, ~30 mm de lado.
+  const [larguraSilhueta] = silhueta.split('×').map((valor) => parseFloat(valor.replace(',', '.')))
+  if (!(larguraSilhueta > 20 && larguraSilhueta < 40)) {
+    throw new Error(`largura da silhueta fora do esperado: ${larguraSilhueta} mm`)
+  }
+
+  // Mexer no slider de largura tem que reescalar a peça traçada.
+  await page.locator('#param-largura').fill('120')
+  await page.locator('#param-largura').dispatchEvent('change')
+  await page.waitForFunction(
+    (antes) => {
+      const celula = [...document.querySelectorAll('.metric')].find((c) =>
+        c.textContent?.includes('Dimensões'),
+      )
+      return celula && celula.querySelector('dd')?.textContent !== antes
+    },
+    silhueta,
+    { timeout: 15000 },
+  )
+  const reescalada = await dimensions.innerText()
+  step(`após largura = 120 mm: ${reescalada.replace(/\s+/g, ' ')}`)
+  const [larguraNova] = reescalada.split('×').map((valor) => parseFloat(valor.replace(',', '.')))
+  if (!(larguraNova > larguraSilhueta * 1.8)) {
+    throw new Error(`a silhueta não reescalou: ${larguraSilhueta} → ${larguraNova} mm`)
   }
 
   if (problems.length > 0) throw new Error(`erros no console:\n${problems.join('\n')}`)

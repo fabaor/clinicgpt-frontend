@@ -263,6 +263,47 @@ button:focus-visible {
   text-align: center;
 }
 
+/* ---------- painel de silhueta ---------- */
+
+.silhueta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--destaque);
+  border-radius: 10px;
+  background: var(--fundo);
+}
+
+.silhueta__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.silhueta__cabecalho h2 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-fraco);
+}
+
+.silhueta__abas {
+  display: flex;
+  gap: 4px;
+}
+
+.silhueta__previa {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo);
+  display: block;
+}
+
 /* ---------- botões ---------- */
 
 .button {

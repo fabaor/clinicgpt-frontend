@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImageAttachments } from './components/ImageAttachments'
 import { InspectorPanel } from './components/InspectorPanel'
 import { ParamControls } from './components/ParamControls'
+import { SilhouettePanel } from './components/SilhouettePanel'
 import { Viewer } from './components/Viewer'
 import { EXAMPLES } from './data/examples'
 import { FILAMENTS, PRINTERS } from './data/printers'
 import { GenerationError, MODELS, generateModel, montarConteudo, usesProxy } from './lib/anthropic'
 import { CadClient } from './lib/cadClient'
 import { prepararVarias } from './lib/image'
+import { modeloDaSilhueta } from './lib/silhouetteModel'
+import type { TraceResult } from './lib/trace'
 import type { ImageAttachment } from './lib/image'
 import type { BuildResult, CadModel, ChatTurn } from './types'
 
@@ -32,6 +35,7 @@ export default function App() {
   const [instruction, setInstruction] = useState('')
   const [imagens, setImagens] = useState<ImageAttachment[]>([])
   const [arrastando, setArrastando] = useState(false)
+  const [traçando, setTraçando] = useState(false)
   const [result, setResult] = useState<BuildResult | null>(null)
   const [buildError, setBuildError] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
@@ -97,6 +101,16 @@ export default function App() {
   }, [code, paramsSignature, printer, filament.density, client])
 
   const isRefinement = history.length > 0
+
+  function usarSilhueta(traco: TraceResult, nomeArquivo: string, larguraAlvo: number) {
+    const gerado = modeloDaSilhueta(traco, nomeArquivo, larguraAlvo)
+    applyModel(gerado)
+    // A silhueta entra no histórico como qualquer peça: dá para pedir ajustes
+    // ao modelo em cima dela ("põe um furo de argola no canto").
+    setHistory(historyForExample(gerado))
+    setTraçando(false)
+    setGenerationError(null)
+  }
 
   async function adicionarImagens(arquivos: File[]) {
     const { imagens: novas, erros } = await prepararVarias(arquivos, imagens.length)
@@ -288,7 +302,13 @@ export default function App() {
               imagens={imagens}
               disabled={isGenerating}
               onAdicionar={(arquivos) => void adicionarImagens(arquivos)}
-              onRemover={(id) => setImagens((atual) => atual.filter((item) => item.id !== id))}
+              onRemover={(id) =>
+                setImagens((atual) => {
+                  const restantes = atual.filter((item) => item.id !== id)
+                  if (restantes.length === 0) setTraçando(false)
+                  return restantes
+                })
+              }
             />
 
             <div className="prompt__actions">
@@ -300,6 +320,16 @@ export default function App() {
               >
                 {isGenerating ? 'Modelando…' : isRefinement ? 'Ajustar peça' : 'Gerar peça'}
               </button>
+              {imagens.length > 0 && (
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => setTraçando((atual) => !atual)}
+                  title="Extruda o contorno da foto, sem chamar a API"
+                >
+                  {traçando ? 'Fechar traçado' : 'Traçar silhueta'}
+                </button>
+              )}
               {isRefinement && (
                 <button
                   className="button button--ghost"
@@ -317,6 +347,14 @@ export default function App() {
 
             {generationError && <p className="alert alert--erro">{generationError}</p>}
           </section>
+
+          {traçando && imagens.length > 0 && (
+            <SilhouettePanel
+              imagens={imagens}
+              onUsar={usarSilhueta}
+              onFechar={() => setTraçando(false)}
+            />
+          )}
 
           <section className="examples">
             <h2>Comece por um exemplo</h2>

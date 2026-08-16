@@ -12,10 +12,11 @@
     "proxy": "node server/proxy.mjs",
     "test:parts": "node --experimental-strip-types scripts/check-standard-parts.mjs",
     "test:manifold": "node --experimental-strip-types scripts/check-manifold.mjs",
+    "test:trace": "node --experimental-strip-types scripts/check-trace.mjs",
     "test:examples": "node --experimental-strip-types scripts/check-examples.mjs",
     "test:smoke": "npm run build && node scripts/smoke.mjs",
     "test:proxy": "node scripts/check-proxy-build.mjs",
-    "test": "npm run test:parts && npm run test:manifold && npm run test:examples && npm run test:smoke && npm run test:proxy"
+    "test": "npm run test:parts && npm run test:manifold && npm run test:trace && npm run test:examples && npm run test:smoke && npm run test:proxy"
   },
   "dependencies": {
     "@jscad/modeling": "^2.13.0",

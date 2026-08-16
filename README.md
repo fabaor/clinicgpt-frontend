@@ -74,6 +74,30 @@ O prompt instrui o modelo a ancorar a escala numa referência visível e a **dec
 impressão** qual usou — ou dizer que assumiu, quando não há nenhuma. Suposição declarada é útil;
 palpite silencioso não. HEIC do iPhone não abre no navegador; o app avisa e diz como converter.
 
+## Silhueta → extrusão
+
+Com uma foto anexada, **Traçar silhueta** extruda o contorno dela — inteiramente no navegador, sem
+chamar a API. Serve para logo, gabarito, junta, chaveiro, peça plana: qualquer coisa cuja forma
+esteja num desenho.
+
+O traçado é marching squares sobre a máscara binária, com limiar por
+[Otsu](https://en.wikipedia.org/wiki/Otsu%27s_method) e simplificação Ramer–Douglas–Peucker. Furos
+saem de graça: cada laço recebe uma **profundidade de aninhamento** e o código aplica nível a nível
+— par é material, ímpar é furo, e uma ilha dentro de um furo volta a ser material.
+
+A prévia desenha os contornos sobre a foto, furo em laranja e material em verde, para você ver na
+hora se o limiar transformou um vão em massa. O resultado vira um `CadModel` normal: código legível
+com os pontos embutidos, sliders de largura, espessura e placa de fundo, e as mesmas verificações de
+fechamento. Dá até para pedir ajustes ao modelo em cima dele depois.
+
+Detalhe de implementação que importa: no Otsu, quando os dois picos estão bem separados, uma faixa
+inteira de cortes dá a mesma variância. Ficar no primeiro encosta o limiar no pico escuro e come a
+forma em imagem com anti-aliasing — então usamos o **meio do platô**.
+
+`npm run test:trace` traça imagens sintéticas de geometria conhecida (quadrado, anel, ilha dentro do
+furo, formas separadas, forma na borda, ruído) e confere as áreas contra a matemática, além de
+construir o código gerado e conferir o volume do sólido.
+
 ## Rodando
 
 ```bash
@@ -126,10 +150,11 @@ O código é comparado em tempo constante, e os exemplos continuam funcionando s
 ```bash
 npm run test:parts      # cotas das peças normalizadas contra a tabela (ISO 261, DIN 934, DIN 912)
 npm run test:manifold   # trava as operações que o BSP do JSCAD não conseguia fazer
+npm run test:trace      # traçado de silhueta contra geometria conhecida, e o código que ele gera
 npm run test:examples   # constrói cada exemplo com mínimos, máximos e padrões; checa fechamento
 npm run test:smoke      # navegador de verdade: renderiza, mexe em parâmetro, baixa e valida o STL
 npm run test:proxy      # build de produção: campo de chave some, código errado barra, certo gera
-npm test                # os cinco
+npm test                # os seis
 ```
 
 O smoke test valida o cabeçalho do STL binário (`84 + 50 × triângulos` bytes) e falha se qualquer
@@ -143,6 +168,8 @@ erro aparecer no console.
 | `src/lib/anthropic.ts` | Chamada da API e normalização da resposta |
 | `src/lib/cad.worker.ts` | Executa o código, mede, verifica o fechamento e serializa o STL |
 | `src/lib/manifoldOps.ts` | Booleanos pelo Manifold, com a mesma assinatura do JSCAD |
+| `src/lib/trace.ts` | Pixels → contornos fechados, com furos e aninhamento |
+| `src/lib/silhouetteModel.ts` | Contornos → peça paramétrica com código legível |
 | `src/lib/standardParts.ts` | Rosca, porca, parafuso, engrenagem e ferramentas de corte |
 | `src/lib/cadClient.ts` | Ponte com o worker, com timeout e recriação |
 | `src/components/Viewer.tsx` | Cena three.js com a mesa da impressora em escala |
