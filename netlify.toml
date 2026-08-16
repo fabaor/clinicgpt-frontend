@@ -1,0 +1,36 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Com isso definido, o front chama a função serverless em vez de falar direto
+  # com a API — e o campo de chave some da interface. Mesma origem, sem CORS.
+  VITE_API_PROXY_URL = "/api/gerar"
+
+[functions]
+  directory = "netlify/functions"
+
+# A regra da função vem antes: a primeira que casa vence, e o curinga abaixo
+# engoliria /api/gerar.
+[[redirects]]
+  from = "/api/gerar"
+  to = "/.netlify/functions/gerar"
+  status = 200
+
+# O app é uma página só; qualquer outra rota cai no index.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# O navegador recusa compilar o WASM em streaming sem este content-type.
+[[headers]]
+  for = "/assets/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000, immutable"
