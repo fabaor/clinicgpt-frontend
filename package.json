@@ -12,7 +12,8 @@
     "proxy": "node server/proxy.mjs",
     "test:examples": "node --experimental-strip-types scripts/check-examples.mjs",
     "test:smoke": "npm run build && node scripts/smoke.mjs",
-    "test": "npm run test:examples && npm run test:smoke"
+    "test:proxy": "node scripts/check-proxy-build.mjs",
+    "test": "npm run test:examples && npm run test:smoke && npm run test:proxy"
   },
   "dependencies": {
     "@jscad/modeling": "^2.13.0",
@@ -22,6 +23,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@netlify/functions": "^5.3.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/three": "^0.185.4",

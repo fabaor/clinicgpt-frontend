@@ -25,16 +25,19 @@ export type GenerateOptions = {
   history: ChatTurn[]
   printer: PrinterProfile
   model: string
-  apiKey: string
+  /** Chave da API no modo direto; código de acesso do site no modo proxy. */
+  credential: string
   signal?: AbortSignal
 }
 
 export async function generateModel(options: GenerateOptions): Promise<CadModel> {
-  const { instruction, history, printer, model, apiKey, signal } = options
+  const { instruction, history, printer, model, credential, signal } = options
 
-  if (!usesProxy && !apiKey.trim()) {
+  if (!credential.trim()) {
     throw new GenerationError(
-      'Informe sua chave da API Anthropic (começa com "sk-ant-") para gerar peças novas.',
+      usesProxy
+        ? 'Informe o código de acesso do site para gerar peças novas.'
+        : 'Informe sua chave da API Anthropic (começa com "sk-ant-") para gerar peças novas.',
     )
   }
 
@@ -56,10 +59,10 @@ export async function generateModel(options: GenerateOptions): Promise<CadModel>
     method: 'POST',
     signal,
     headers: PROXY_URL
-      ? { 'content-type': 'application/json' }
+      ? { 'content-type': 'application/json', 'x-codigo-acesso': credential.trim() }
       : {
           'content-type': 'application/json',
-          'x-api-key': apiKey.trim(),
+          'x-api-key': credential.trim(),
           'anthropic-version': '2023-06-01',
           // Necessário para chamar a API direto do navegador.
           'anthropic-dangerous-direct-browser-access': 'true',
@@ -109,7 +112,11 @@ async function describeHttpError(response: Response): Promise<string> {
 
   switch (response.status) {
     case 401:
-      return 'Chave da API inválida ou sem permissão.'
+      return usesProxy
+        ? detail || 'Código de acesso inválido.'
+        : 'Chave da API inválida ou sem permissão.'
+    case 503:
+      return detail || 'O site ainda não está configurado para gerar peças.'
     case 400:
       return `Requisição recusada pela API${detail ? `: ${detail}` : '.'}`
     case 429:

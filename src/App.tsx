@@ -8,7 +8,11 @@ import { GenerationError, MODELS, generateModel, usesProxy } from './lib/anthrop
 import { CadClient } from './lib/cadClient'
 import type { BuildResult, CadModel, ChatTurn } from './types'
 
-const API_KEY_STORAGE = 'gerador-stl:chave-api'
+// No modo proxy a credencial é o código de acesso do site; no modo direto, a
+// chave da API. Guardadas em chaves distintas para uma não sobrescrever a outra.
+const CREDENTIAL_STORAGE = usesProxy ? 'gerador-stl:codigo-acesso' : 'gerador-stl:chave-api'
+const CREDENTIAL_LABEL = usesProxy ? 'Código de acesso' : 'Chave da API'
+const CREDENTIAL_PLACEHOLDER = usesProxy ? 'código do site' : 'sk-ant-...'
 
 export default function App() {
   const clientRef = useRef<CadClient | null>(null)
@@ -32,7 +36,9 @@ export default function App() {
   const [printerId, setPrinterId] = useState(PRINTERS[0].id)
   const [filamentId, setFilamentId] = useState<string>(FILAMENTS[0].id)
   const [modelId, setModelId] = useState<string>(MODELS[1].id)
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) ?? '')
+  const [credential, setCredential] = useState(
+    () => localStorage.getItem(CREDENTIAL_STORAGE) ?? '',
+  )
   const [tab, setTab] = useState<'params' | 'code'>('params')
   const [wireframe, setWireframe] = useState(false)
 
@@ -52,8 +58,8 @@ export default function App() {
   useEffect(() => () => client.dispose(), [client])
 
   useEffect(() => {
-    localStorage.setItem(API_KEY_STORAGE, apiKey)
-  }, [apiKey])
+    localStorage.setItem(CREDENTIAL_STORAGE, credential)
+  }, [credential])
 
   // Toda mudança de código, parâmetro, impressora ou filamento reconstrói a peça.
   useEffect(() => {
@@ -105,7 +111,7 @@ export default function App() {
         history: turns,
         printer,
         model: modelId,
-        apiKey,
+        credential,
         signal: controller.signal,
       })
 
@@ -200,18 +206,16 @@ export default function App() {
             </select>
           </label>
 
-          {!usesProxy && (
-            <label>
-              Chave da API
-              <input
-                type="password"
-                placeholder="sk-ant-..."
-                value={apiKey}
-                autoComplete="off"
-                onChange={(event) => setApiKey(event.target.value)}
-              />
-            </label>
-          )}
+          <label>
+            {CREDENTIAL_LABEL}
+            <input
+              type="password"
+              placeholder={CREDENTIAL_PLACEHOLDER}
+              value={credential}
+              autoComplete="off"
+              onChange={(event) => setCredential(event.target.value)}
+            />
+          </label>
         </div>
       </header>
 

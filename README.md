@@ -46,7 +46,10 @@ dá para ajustar parâmetros e baixar STL na hora. Para gerar peças novas, cole
 
 ### Sem expor a chave
 
-Em produção, suba o proxy e a chave sai do navegador:
+Com `VITE_API_PROXY_URL` definido, o app troca de modo: o campo de chave da API some da
+interface e as chamadas passam por um backend que guarda a chave.
+
+Localmente:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-... npm run proxy
@@ -54,14 +57,36 @@ echo 'VITE_API_PROXY_URL=http://localhost:8787/api/gerar' > .env.local
 npm run dev
 ```
 
-`server/proxy.mjs` tem ~60 linhas e serve de molde para uma function na Vercel, Cloudflare ou Netlify.
+## Publicando no Netlify
+
+`netlify.toml` e `netlify/functions/gerar.mts` já deixam tudo pronto: o build define
+`VITE_API_PROXY_URL=/api/gerar` e a função atende nesse caminho, na mesma origem (sem CORS).
+
+Como a conta da API é do dono do site, **gerar exige um código de acesso**. Duas variáveis de
+ambiente no projeto do Netlify:
+
+| Variável | Papel |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | A chave. Fica só no servidor. |
+| `CODIGO_ACESSO` | O que os visitantes digitam para poder gerar peças. |
+
+A função **falha fechada**: sem as duas configuradas, ela recusa toda geração com uma mensagem
+explicando o que falta. Com dinheiro em jogo, configuração pela metade não pode virar site aberto.
+O código é comparado em tempo constante, e os exemplos continuam funcionando sem código nenhum.
+
+> A proteção por senha do próprio Netlify (que bloquearia o site inteiro) exige plano Pro. O portão
+> na função tem o mesmo efeito prático no plano grátis — e protege a operação que custa dinheiro,
+> em vez de só a visualização da página.
+
+`server/proxy.mjs` faz o mesmo papel fora do Netlify e serve de molde para Vercel ou Cloudflare.
 
 ## Testes
 
 ```bash
 npm run test:examples   # constrói cada exemplo com mínimos, máximos e padrões; checa fechamento
 npm run test:smoke      # navegador de verdade: renderiza, mexe em parâmetro, baixa e valida o STL
-npm test                # os dois
+npm run test:proxy      # build de produção: campo de chave some, código errado barra, certo gera
+npm test                # os três
 ```
 
 O smoke test valida o cabeçalho do STL binário (`84 + 50 × triângulos` bytes) e falha se qualquer
