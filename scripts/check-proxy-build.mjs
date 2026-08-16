@@ -12,10 +12,12 @@ import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { pngDeTeste, stlDeCaixa } from './fixtures.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const DIST = join(ROOT, 'dist')
 const PROXY_PATH = '/api/gerar'
+const MALHA_PATH = '/api/malha'
 const TYPES = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -69,6 +71,12 @@ execFileSync('npx', ['vite', 'build'], {
 const CODIGO = 'codigo-de-teste'
 let codigoRecebido = null
 
+// Faz o papel do serviço de imagem-para-3D: a tarefa fica "gerando" numa
+// consulta e conclui na seguinte, para exercitar o laço de espera de verdade.
+const MODELO_STL = stlDeCaixa(10, 20, 30)
+let consultasMalha = 0
+const acoesMalha = []
+
 const server = createServer(async (request, response) => {
   const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname))
 
@@ -85,6 +93,44 @@ const server = createServer(async (request, response) => {
     return
   }
 
+  if (path === MALHA_PATH) {
+    const corpo = JSON.parse(await lerCorpo(request))
+    acoesMalha.push(corpo.acao)
+
+    if (request.headers['x-codigo-acesso'] !== CODIGO) {
+      response.writeHead(401, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ error: { message: 'Código de acesso inválido.' } }))
+      return
+    }
+
+    if (corpo.acao === 'criar') {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ tarefa: 'tarefa-1', provedor: 'ServicoDeTeste' }))
+      return
+    }
+    if (corpo.acao === 'status') {
+      consultasMalha++
+      const pronto = consultasMalha >= 2
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(
+        JSON.stringify(
+          pronto
+            ? { estado: 'success', progresso: 100, url: 'https://exemplo.tripo3d.ai/modelo.stl' }
+            : { estado: 'running', progresso: 45 },
+        ),
+      )
+      return
+    }
+    if (corpo.acao === 'baixar') {
+      response.writeHead(200, { 'content-type': 'application/octet-stream' })
+      response.end(MODELO_STL)
+      return
+    }
+    response.writeHead(400, { 'content-type': 'application/json' })
+    response.end(JSON.stringify({ error: { message: 'ação desconhecida' } }))
+    return
+  }
+
   try {
     const file = join(DIST, path === '/' ? 'index.html' : path)
     const body = await readFile(file)
@@ -94,6 +140,15 @@ const server = createServer(async (request, response) => {
     response.writeHead(404).end('nao encontrado')
   }
 })
+
+function lerCorpo(request) {
+  return new Promise((resolve, reject) => {
+    const pedacos = []
+    request.on('data', (pedaco) => pedacos.push(pedaco))
+    request.on('end', () => resolve(Buffer.concat(pedacos).toString('utf8')))
+    request.on('error', reject)
+  })
+}
 
 await new Promise((resolve) => server.listen(0, resolve))
 const base = `http://127.0.0.1:${server.address().port}`
@@ -151,6 +206,44 @@ try {
   const dimensoes = await page.locator('.metric', { hasText: 'Dimensões' }).locator('dd').innerText()
   console.log(`  dimensões: ${dimensoes.replace(/\s+/g, ' ')}`)
   if (!dimensoes.includes('40')) throw new Error(`dimensão inesperada: ${dimensoes}`)
+
+  // Foto → malha generativa, com o serviço mockado. Prova o ciclo completo:
+  // criar tarefa, esperar a fila, baixar os bytes e importar no pipeline.
+  await page.setInputFiles('.anexos__input', {
+    name: 'objeto.png',
+    mimeType: 'image/png',
+    buffer: pngDeTeste(),
+  })
+  await page.locator('.anexo img').waitFor({ timeout: 10000 })
+  await page.getByRole('button', { name: 'Gerar malha 3D' }).click()
+
+  // O botão precisa mostrar andamento enquanto a tarefa roda.
+  await page.waitForFunction(
+    () => /gerando|na fila|enviando|baixando/i.test(document.body.textContent ?? ''),
+    { timeout: 15000 },
+  )
+  console.log('  andamento exibido durante a geração')
+
+  await page.waitForFunction(
+    () => document.querySelector('.stage__title')?.textContent?.startsWith('Malha de'),
+    { timeout: 60000 },
+  )
+  await page.waitForTimeout(1500)
+
+  const ciclo = ['criar', 'status', 'status', 'baixar']
+  if (ciclo.some((acao, i) => acoesMalha[i] !== acao)) {
+    throw new Error(`ciclo inesperado: ${acoesMalha.join(' → ')}`)
+  }
+  console.log(`  ciclo do serviço: ${acoesMalha.join(' → ')}`)
+
+  const medidas = await page.locator('.metric', { hasText: 'Dimensões' }).locator('dd').innerText()
+  console.log(`  malha gerada: ${medidas.replace(/\s+/g, ' ')}`)
+  // A caixa 10×20×30 vem em Y-para-cima; convertida fica 10 × 30 × 20, e a
+  // altura alvo de 60 mm triplica tudo: 30 × 90 × 60.
+  const [mx, my, mz] = medidas.split('×').map((valor) => parseFloat(valor.replace(',', '.')))
+  if (Math.abs(mx - 30) > 2 || Math.abs(my - 90) > 2 || Math.abs(mz - 60) > 2) {
+    throw new Error(`esperava ~30 × 90 × 60 após converter e escalar, veio ${mx} × ${my} × ${mz}`)
+  }
 
   if (problems.length > 0) throw new Error(`erros no console:\n${problems.join('\n')}`)
 

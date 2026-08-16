@@ -11,9 +11,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { deflateSync } from 'node:zlib'
-
-const zlibSync = (buffer) => deflateSync(buffer)
+import { pngDeTeste, stlDeCaixa } from './fixtures.mjs'
 
 /**
  * Usa o Chromium já presente em PLAYWRIGHT_BROWSERS_PATH mesmo quando a revisão
@@ -103,56 +101,6 @@ page.on('console', (message) => {
 page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`))
 
 const step = (name) => console.log(`  ${name}`)
-
-/** PNG cinza montado à mão, com um quadrado escuro no meio para a silhueta ter o que traçar. */
-function pngDeTeste() {
-  const crcTabela = []
-  for (let n = 0; n < 256; n++) {
-    let c = n
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
-    crcTabela[n] = c >>> 0
-  }
-  const crc = (buf) => {
-    let c = 0xffffffff
-    for (const byte of buf) c = crcTabela[(c ^ byte) & 0xff] ^ (c >>> 8)
-    return (c ^ 0xffffffff) >>> 0
-  }
-  const bloco = (tipo, dados) => {
-    const corpo = Buffer.concat([Buffer.from(tipo, 'ascii'), dados])
-    const tamanho = Buffer.alloc(4)
-    tamanho.writeUInt32BE(dados.length)
-    const checagem = Buffer.alloc(4)
-    checagem.writeUInt32BE(crc(corpo))
-    return Buffer.concat([tamanho, corpo, checagem])
-  }
-
-  const lado = 64
-  const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(lado, 0)
-  ihdr.writeUInt32BE(lado, 4)
-  ihdr[8] = 8 // bits por canal
-  ihdr[9] = 0 // escala de cinza
-
-  // Quadrado escuro centrado: forma única, fechada, longe das bordas.
-  const linhas = []
-  for (let y = 0; y < lado; y++) {
-    const linha = Buffer.alloc(lado + 1)
-    linha[0] = 0 // sem filtro
-    for (let x = 0; x < lado; x++) {
-      const dentro = x >= 16 && x < 48 && y >= 16 && y < 48
-      linha[x + 1] = dentro ? 0x20 : 0xe8
-    }
-    linhas.push(linha)
-  }
-  const comprimido = zlibSync(Buffer.concat(linhas))
-
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    bloco('IHDR', ihdr),
-    bloco('IDAT', comprimido),
-    bloco('IEND', Buffer.alloc(0)),
-  ])
-}
 
 try {
   await page.goto(base, { waitUntil: 'networkidle' })
@@ -334,6 +282,59 @@ try {
   if (!(larguraNova > larguraSilhueta * 1.8)) {
     throw new Error(`a silhueta não reescalou: ${larguraSilhueta} → ${larguraNova} mm`)
   }
+
+  // Importar malha: um STL de fora tem que atravessar o mesmo caminho — worker,
+  // verificação, sliders e exportação.
+  await page.setInputFiles('#importar-malha', {
+    name: 'caixa.stl',
+    mimeType: 'model/stl',
+    buffer: stlDeCaixa(10, 20, 30),
+  })
+  await page.waitForFunction(
+    () => document.querySelector('.stage__title')?.textContent?.startsWith('Malha:'),
+    { timeout: 15000 },
+  )
+  await page.waitForTimeout(1200)
+
+  const importada = await dimensions.innerText()
+  step(`malha importada: ${importada.replace(/\s+/g, ' ')}`)
+  const medidas = importada.split('×').map((valor) => parseFloat(valor.replace(',', '.')))
+  if (Math.abs(medidas[0] - 10) > 0.5 || Math.abs(medidas[2] - 30) > 0.5) {
+    throw new Error(`a caixa importada mediu ${medidas.join(' × ')}, esperava 10 × 20 × 30`)
+  }
+
+  // O slider de altura reescala a malha proporcionalmente.
+  await page.locator('#param-alturaAlvo').fill('60')
+  await page.locator('#param-alturaAlvo').dispatchEvent('change')
+  await page.waitForFunction(
+    (antes) => {
+      const celula = [...document.querySelectorAll('.metric')].find((c) =>
+        c.textContent?.includes('Dimensões'),
+      )
+      return celula && celula.querySelector('dd')?.textContent !== antes
+    },
+    importada,
+    { timeout: 15000 },
+  )
+  const malhaReescalada = await dimensions.innerText()
+  step(`após altura = 60 mm: ${malhaReescalada.replace(/\s+/g, ' ')}`)
+  const novas = malhaReescalada.split('×').map((valor) => parseFloat(valor.replace(',', '.')))
+  if (Math.abs(novas[0] - 20) > 1 || Math.abs(novas[2] - 60) > 1) {
+    throw new Error(`esperava 20 × 40 × 60 após reescalar, veio ${novas.join(' × ')}`)
+  }
+
+  // E o STL sai com a caixa reescalada: 12 triângulos, como entrou.
+  const [baixadaMalha] = await Promise.all([
+    page.waitForEvent('download', { timeout: 20000 }),
+    page.getByRole('button', { name: 'Baixar STL' }).click(),
+  ])
+  const fluxo = await baixadaMalha.createReadStream()
+  const pedacos = []
+  for await (const pedaco of fluxo) pedacos.push(pedaco)
+  const stlMalha = Buffer.concat(pedacos)
+  const trianguloz = stlMalha.readUInt32LE(80)
+  step(`${baixadaMalha.suggestedFilename()}: ${trianguloz} triângulos`)
+  if (trianguloz !== 12) throw new Error(`esperava 12 triângulos no STL, veio ${trianguloz}`)
 
   if (problems.length > 0) throw new Error(`erros no console:\n${problems.join('\n')}`)
 

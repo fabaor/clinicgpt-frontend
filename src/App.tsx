@@ -9,7 +9,11 @@ import { FILAMENTS, PRINTERS } from './data/printers'
 import { GenerationError, MODELS, generateModel, montarConteudo, usesProxy } from './lib/anthropic'
 import { CadClient } from './lib/cadClient'
 import { prepararVarias } from './lib/image'
+import { MeshLoadError, carregarMalha, deYParaZ } from './lib/meshLoader'
+import { Mesh3dError, gerarMalha } from './lib/mesh3d'
+import { modeloDaMalha } from './lib/meshModel'
 import { modeloDaSilhueta } from './lib/silhouetteModel'
+import type { ProgressoMalha } from './lib/mesh3d'
 import type { TraceResult } from './lib/trace'
 import type { ImageAttachment } from './lib/image'
 import type { BuildResult, CadModel, ChatTurn } from './types'
@@ -36,6 +40,7 @@ export default function App() {
   const [imagens, setImagens] = useState<ImageAttachment[]>([])
   const [arrastando, setArrastando] = useState(false)
   const [traçando, setTraçando] = useState(false)
+  const [progressoMalha, setProgressoMalha] = useState<ProgressoMalha | null>(null)
   const [result, setResult] = useState<BuildResult | null>(null)
   const [buildError, setBuildError] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
@@ -69,6 +74,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(CREDENTIAL_STORAGE, credential)
   }, [credential])
+
+  // A malha importada vai ao worker sempre que a peça atual muda de malha.
+  useEffect(() => {
+    void client.setMesh(model.mesh?.positions ?? null)
+  }, [client, model])
 
   // Toda mudança de código, parâmetro, impressora ou filamento reconstrói a peça.
   useEffect(() => {
@@ -110,6 +120,70 @@ export default function App() {
     setHistory(historyForExample(gerado))
     setTraçando(false)
     setGenerationError(null)
+  }
+
+  async function importarArquivoDeMalha(arquivo: File) {
+    setGenerationError(null)
+    try {
+      const carregada = await carregarMalha(await arquivo.arrayBuffer(), arquivo.name)
+      const maior = Math.max(...carregada.dimensoes)
+      aplicarMalha(
+        carregada.positions,
+        `Malha: ${arquivo.name.replace(/\.[^.]+$/, '')}`,
+        maior > 0 ? Math.min(120, Math.max(20, carregada.dimensoes[2] || maior)) : 60,
+        `arquivo "${arquivo.name}"`,
+      )
+    } catch (erro) {
+      setGenerationError(
+        erro instanceof MeshLoadError || erro instanceof Error
+          ? erro.message
+          : 'Falha ao ler a malha.',
+      )
+    }
+  }
+
+  async function gerarMalhaDaFoto() {
+    if (imagens.length === 0 || progressoMalha) return
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setGenerationError(null)
+    setProgressoMalha({ etapa: 'enviando', progresso: 0 })
+
+    try {
+      const { buffer, provedor } = await gerarMalha({
+        imagem: imagens[0],
+        credential,
+        onProgresso: setProgressoMalha,
+        signal: controller.signal,
+      })
+
+      const carregada = await carregarMalha(buffer, 'modelo.glb')
+      // Serviço generativo entrega Y para cima; o app trabalha com Z.
+      aplicarMalha(deYParaZ(carregada.positions), `Malha de ${imagens[0].name}`, 60, provedor)
+    } catch (erro) {
+      if (erro instanceof DOMException && erro.name === 'AbortError') return
+      setGenerationError(
+        erro instanceof Mesh3dError || erro instanceof MeshLoadError || erro instanceof Error
+          ? erro.message
+          : 'Falha ao gerar a malha.',
+      )
+    } finally {
+      setProgressoMalha(null)
+    }
+  }
+
+  function aplicarMalha(
+    positions: Float32Array,
+    nome: string,
+    alturaSugerida: number,
+    origem: string,
+  ) {
+    const gerado = modeloDaMalha({ positions, origem }, nome, alturaSugerida, origem)
+    applyModel(gerado)
+    setHistory(historyForExample(gerado))
+    setTraçando(false)
   }
 
   async function adicionarImagens(arquivos: File[]) {
@@ -321,14 +395,27 @@ export default function App() {
                 {isGenerating ? 'Modelando…' : isRefinement ? 'Ajustar peça' : 'Gerar peça'}
               </button>
               {imagens.length > 0 && (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => setTraçando((atual) => !atual)}
-                  title="Extruda o contorno da foto, sem chamar a API"
-                >
-                  {traçando ? 'Fechar traçado' : 'Traçar silhueta'}
-                </button>
+                <>
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={() => setTraçando((atual) => !atual)}
+                    title="Extruda o contorno da foto, sem chamar a API"
+                  >
+                    {traçando ? 'Fechar traçado' : 'Traçar silhueta'}
+                  </button>
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    disabled={Boolean(progressoMalha)}
+                    onClick={() => void gerarMalhaDaFoto()}
+                    title="Envia a foto a um serviço de imagem-para-3D e importa a malha"
+                  >
+                    {progressoMalha
+                      ? `${progressoMalha.etapa}… ${Math.round(progressoMalha.progresso)}%`
+                      : 'Gerar malha 3D'}
+                  </button>
+                </>
               )}
               {isRefinement && (
                 <button
@@ -355,6 +442,26 @@ export default function App() {
               onFechar={() => setTraçando(false)}
             />
           )}
+
+          <section className="examples">
+            <h2>Ou importe uma malha pronta</h2>
+            <div className="examples__list">
+              <input
+                id="importar-malha"
+                className="anexos__input"
+                type="file"
+                accept=".stl,.glb,.gltf,model/stl,model/gltf-binary"
+                onChange={(event) => {
+                  const arquivo = event.target.files?.[0]
+                  if (arquivo) void importarArquivoDeMalha(arquivo)
+                  event.target.value = ''
+                }}
+              />
+              <label className="chip anexos__botao" htmlFor="importar-malha">
+                Importar STL ou GLB
+              </label>
+            </div>
+          </section>
 
           <section className="examples">
             <h2>Comece por um exemplo</h2>

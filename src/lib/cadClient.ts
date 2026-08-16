@@ -9,6 +9,9 @@ type BuildArgs = {
   density: number
 }
 
+/** Triângulos crus, 9 floats por triângulo. */
+type Malha = Float32Array | null
+
 type Pending = {
   resolve: (value: never) => void
   reject: (error: Error) => void
@@ -26,8 +29,31 @@ export class CadClient {
   /** Guardado para reconstruir sozinho caso o worker tenha sido reiniciado. */
   private lastBuild: BuildArgs | null = null
   private hasGeometry = false
+  /** A malha importada precisa ser reenviada quando o worker é recriado. */
+  private malha: Malha = null
+  private malhaEnviada = false
+
+  /**
+   * Guarda a malha importada e a envia ao worker. Passe `null` para descartá-la
+   * quando a peça atual deixar de ser importada.
+   */
+  async setMesh(positions: Malha): Promise<void> {
+    this.malha = positions
+    this.malhaEnviada = false
+    await this.garantirMalha()
+  }
+
+  private async garantirMalha(): Promise<void> {
+    if (this.malhaEnviada) return
+    // Uma cópia por envio: o buffer é transferido e o original ficaria vazio.
+    const copia = this.malha ? new Float32Array(this.malha) : null
+    await this.send<unknown>({ type: 'mesh', positions: copia }, copia ? [copia.buffer] : [])
+    this.malhaEnviada = true
+  }
 
   async build(args: BuildArgs): Promise<BuildResult> {
+    // Reenvia a malha se o worker foi recriado desde o último envio.
+    if (this.malha) await this.garantirMalha()
     const result = await this.send<BuildResult>({ type: 'build', ...args })
     this.lastBuild = args
     this.hasGeometry = true
@@ -54,9 +80,10 @@ export class CadClient {
     this.worker?.terminate()
     this.worker = null
     this.hasGeometry = false
+    this.malhaEnviada = false
   }
 
-  private send<T>(payload: Record<string, unknown>): Promise<T> {
+  private send<T>(payload: Record<string, unknown>, transfer: Transferable[] = []): Promise<T> {
     const worker = this.ensureWorker()
     const id = this.nextId++
 
@@ -73,7 +100,7 @@ export class CadClient {
       }, BUILD_TIMEOUT_MS)
 
       this.pending.set(id, { resolve: resolve as Pending['resolve'], reject, timer })
-      worker.postMessage({ id, ...payload })
+      worker.postMessage({ id, ...payload }, transfer)
     })
   }
 
@@ -109,6 +136,8 @@ export class CadClient {
     this.worker?.terminate()
     this.worker = null
     this.hasGeometry = false
+    // O worker novo nasce sem a malha; o próximo build a reenvia.
+    this.malhaEnviada = false
   }
 
   private failAll(error: Error) {

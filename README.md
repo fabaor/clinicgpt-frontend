@@ -98,6 +98,37 @@ forma em imagem com anti-aliasing — então usamos o **meio do platô**.
 furo, formas separadas, forma na borda, ruído) e confere as áreas contra a matemática, além de
 construir o código gerado e conferir o volume do sólido.
 
+## Malha pronta e malha generativa
+
+Duas portas de entrada para geometria que não vem de código:
+
+**Importar STL ou GLB.** Um arquivo de fora entra no mesmo pipeline de todas as peças: verificação
+de fechamento, aviso de mesa, sliders de altura e giro, exportação. Útil para conferir e reescalar
+malha baixada de qualquer lugar.
+
+**Gerar malha 3D a partir da foto.** Manda a imagem a um serviço de imagem-para-3D e importa o
+resultado. Como a geração leva minutos — muito além do limite de uma função síncrona — o fluxo é
+assíncrono: `criar` devolve o id da tarefa, o navegador consulta o `status`, e `baixar` traz os bytes
+pela função (buscar direto do CDN do serviço esbarraria em CORS).
+
+Nos dois casos a malha **não** vira código com milhares de triângulos embutidos. Ela fica guardada no
+worker, e o código gerado a alcança chamando `malhaImportada()`. Com isso a peça importada aceita
+sliders, entra em booleanos com outras formas e passa pelas mesmas verificações — inclusive dá para
+pedir ao modelo "corta a base plana desta malha".
+
+> **Não verificado contra o serviço real.** `netlify/functions/malha.mts` foi escrito a partir da
+> documentação do Tripo, mas não havia chave disponível para exercitá-lo. O adaptador está isolado
+> numa função (`adaptadorTripo`) justamente para ser o único ponto a conferir na primeira execução
+> de verdade. Todo o resto do caminho — fila, consulta, download, detecção de formato, importação,
+> conversão de eixo, escala e verificação — está coberto por teste com o serviço mockado.
+
+O serviço entrega em Y-para-cima e em escala arbitrária; o app converte o eixo e a altura vira
+parâmetro. O formato é detectado pelo **conteúdo**, não pela extensão: um serviço pode devolver STL
+numa URL terminada em `.glb`, e confiar no nome faz o parser errado rodar.
+
+Malha generativa é boa para decorativo. Não dá peça paramétrica nem escala confiável — para suporte
+que precisa ter 62,0 mm, o caminho é descrever, não fotografar.
+
 ## Rodando
 
 ```bash
@@ -132,8 +163,11 @@ ambiente no projeto do Netlify:
 
 | Variável | Papel |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | A chave. Fica só no servidor. |
+| `ANTHROPIC_API_KEY` | A chave da Anthropic. Fica só no servidor. |
 | `CODIGO_ACESSO` | O que os visitantes digitam para poder gerar peças. |
+| `MALHA_API_KEY` | Opcional: chave do serviço de imagem-para-3D. |
+| `MALHA_PROVEDOR` | Opcional: qual adaptador usar (padrão `tripo`). |
+| `MALHA_DOMINIOS` | De onde a função aceita baixar o modelo pronto. |
 
 A função **falha fechada**: sem as duas configuradas, ela recusa toda geração com uma mensagem
 explicando o que falta. Com dinheiro em jogo, configuração pela metade não pode virar site aberto.
@@ -169,6 +203,8 @@ erro aparecer no console.
 | `src/lib/cad.worker.ts` | Executa o código, mede, verifica o fechamento e serializa o STL |
 | `src/lib/manifoldOps.ts` | Booleanos pelo Manifold, com a mesma assinatura do JSCAD |
 | `src/lib/trace.ts` | Pixels → contornos fechados, com furos e aninhamento |
+| `src/lib/meshLoader.ts` | STL/GLB → triângulos, com formato detectado pelo conteúdo |
+| `src/lib/mesh3d.ts` | Fila, consulta e download do serviço de imagem-para-3D |
 | `src/lib/silhouetteModel.ts` | Contornos → peça paramétrica com código legível |
 | `src/lib/standardParts.ts` | Rosca, porca, parafuso, engrenagem e ferramentas de corte |
 | `src/lib/cadClient.ts` | Ponte com o worker, com timeout e recriação |

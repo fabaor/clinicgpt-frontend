@@ -11,6 +11,14 @@ export type ParamSpec = {
   unit?: string
 }
 
+/** Malha vinda de fora (serviço de imagem-para-3D, ou arquivo STL/GLB). */
+export type MeshImport = {
+  /** Triângulos crus: 9 floats por triângulo, em mm. */
+  positions: Float32Array
+  /** De onde veio, para creditar nas notas e no resumo. */
+  origem: string
+}
+
 export type CadModel = {
   /** Nome curto da peça, em português. */
   name: string
@@ -21,6 +29,12 @@ export type CadModel = {
   params: ParamSpec[]
   /** Corpo do módulo JS que define `function main(params)`. */
   code: string
+  /**
+   * Quando presente, o código chama `malhaImportada()` para pegar esta malha.
+   * Isso deixa a peça importada passar pelo mesmo caminho de todas as outras:
+   * sliders, verificações, booleanos e exportação.
+   */
+  mesh?: MeshImport
 }
 
 export type BuildStats = {

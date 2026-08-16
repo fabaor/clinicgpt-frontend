@@ -20,16 +20,30 @@ type BuildRequest = {
   density: number
 }
 
+type MeshRequest = {
+  type: 'mesh'
+  id: number
+  /** Triângulos crus, 9 floats por triângulo. Nulo descarta a malha guardada. */
+  positions: Float32Array | null
+}
+
 type ExportRequest = {
   type: 'export'
   id: number
   binary: boolean
 }
 
-type Request = BuildRequest | ExportRequest
+type Request = BuildRequest | ExportRequest | MeshRequest
 
 /** Última peça construída, guardada para exportar sem recalcular. */
 let current: Geom3 | null = null
+
+/**
+ * Malha importada de fora, convertida uma vez só. O código gerado a alcança
+ * chamando `malhaImportada()` — assim a peça importada anda pelo mesmo caminho
+ * de qualquer outra: parâmetros, booleanos, verificações e exportação.
+ */
+let malha: Geom3 | null = null
 
 /** Booleanos do Manifold, prontos depois que o WASM carrega. */
 let ops: ManifoldOps | null = null
@@ -60,6 +74,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
   try {
     if (!ops) ops = await carregarManifold()
     if (request.type === 'build') handleBuild(request, ops)
+    else if (request.type === 'mesh') handleMesh(request)
     else handleExport(request)
   } catch (error) {
     self.postMessage({
@@ -92,6 +107,28 @@ function handleBuild(request: BuildRequest, ops: ManifoldOps) {
   }
 }
 
+function handleMesh(request: MeshRequest) {
+  malha = request.positions ? geometriaDeTriangulos(request.positions) : null
+  self.postMessage({ type: 'meshReady', id: request.id })
+}
+
+/** Triângulos crus viram geom3. Vértices coincidentes são soldados adiante,
+ * na conversão para o Manifold — aqui só montamos os polígonos. */
+function geometriaDeTriangulos(positions: Float32Array): Geom3 {
+  const poligonos = []
+  for (let i = 0; i + 8 < positions.length; i += 9) {
+    poligonos.push(
+      jscad.geometries.poly3.create([
+        [positions[i], positions[i + 1], positions[i + 2]],
+        [positions[i + 3], positions[i + 4], positions[i + 5]],
+        [positions[i + 6], positions[i + 7], positions[i + 8]],
+      ]),
+    )
+  }
+  if (poligonos.length === 0) throw new Error('A malha importada não tem triângulos.')
+  return jscad.geometries.geom3.create(poligonos) as Geom3
+}
+
 function handleExport(request: ExportRequest) {
   if (!current) throw new Error('Nenhuma peça construída para exportar.')
   const parts = stlSerializer.serialize({ binary: request.binary }, current)
@@ -110,6 +147,10 @@ function evaluate(
     union: ops.union,
     subtract: ops.subtract,
     intersect: ops.intersect,
+    malhaImportada: () => {
+      if (!malha) throw new Error('Nenhuma malha importada disponível nesta sessão.')
+      return malha
+    },
   }
   const names = Object.keys(escopo)
   const values = names.map((name) => escopo[name])
