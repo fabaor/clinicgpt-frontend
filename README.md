@@ -103,13 +103,39 @@ erro aparecer no console.
 | `src/components/Viewer.tsx` | Cena three.js com a mesa da impressora em escala |
 | `src/data/examples.ts` | Peças prontas que funcionam sem chave |
 
+## Peças normalizadas
+
+Rosca e dente de engrenagem têm perfil exato. Um modelo improvisando os dois produz peça que
+*parece* certa e não encaixa — por isso eles não são improvisados: `src/lib/standardParts.ts`
+gera a geometria da norma, e `npm run test:parts` confere cada cota contra a tabela.
+
+| Função | O que devolve |
+| --- | --- |
+| `parafusoSextavado({ diametro, comprimento, ... })` | Parafuso completo, cabeça + rosca ISO |
+| `porcaRoscada({ tamanho, folga })` | Porca sextavada DIN 934 com rosca interna |
+| `roscaMetrica({ diametro, altura })` | Barra roscada nua |
+| `engrenagemReta({ modulo, dentes, largura })` | Engrenagem de perfil evolvente |
+| `bolsaPorca`, `furoParafuso`, `furoInserto` | Ferramentas de corte para subtrair |
+
+### Rosca não entra em booleano
+
+Descoberto testando, não supondo: o CSG do JSCAD **rasga a malha** ao unir ou subtrair uma hélice.
+Testamos 36 combinações de resolução, modificadores (`snap`, `retessellate`) e estratégias de corte
+— todas produziram malha aberta e peça em pedaços.
+
+Por isso rosca, porca e parafuso são gerados como **poliedro paramétrico**, descrevendo a superfície
+diretamente. Sai fechado por construção, dimensionalmente exato e ~20× mais rápido. A consequência
+é que essas peças vêm inteiras e não podem ser combinadas: para rosca fêmea numa peça sua, use
+`furoInserto` — que é o que se deve fazer em FDM de qualquer forma, já que rosca impressa pequena
+espana e inserto de latão não.
+
 ## Limites conhecidos
 
 - **Confira no fatiador.** As checagens pegam malha aberta e peça fora da mesa, não julgam se a peça
   serve para o que você quer.
-- **Sem roscas nem engrenagens de verdade.** Dá para pedir, mas saem aproximações — para isso ainda
-  compensa uma biblioteca dedicada.
-- **Peças orgânicas não são o forte.** O JSCAD é CSG: sólidos, furos e extrusões. Para escultura, um
-  gerador de malha é o caminho.
+- **Sem fillet em aresta qualquer.** CSG sobre malha não faz isso. Para arredondamento de verdade o
+  caminho é um kernel B-rep (OpenCascade, via `opencascade.js` ou build123d num backend).
+- **Peças orgânicas não são o forte.** Para escultura e formas fluidas, o instrumento certo é campo
+  de distância (SDF) com união suave, não CSG.
 - O código gerado roda no worker com `new Function`. O isolamento é de estabilidade (worker sem DOM,
   timeout), não uma sandbox de segurança — não cole código de terceiros no editor.

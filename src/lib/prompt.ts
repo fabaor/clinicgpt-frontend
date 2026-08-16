@@ -34,6 +34,48 @@ You MUST answer by calling the \`emitir_modelo\` tool exactly once. Never answer
   modifiers: generalize, snap, retessellate
   Plus \`TAU\` (= 2π) and standard \`Math\`.
 
+## Standard parts — ALWAYS use these instead of improvising
+
+Threads and gear teeth have exact profiles. Improvising them produces parts that look right and
+do not fit. These generators are already in scope, dimensionally verified against the standards:
+
+  parafusoSextavado({ diametro, comprimento, passo?, chave?, alturaCabeca? })
+    → a COMPLETE hex-head bolt, head and thread in one closed surface, sitting at z = 0.
+      Use this whenever the user asks for a bolt or screw.
+
+  roscaMetrica({ diametro, altura, passo?, segmentos? })
+    → a bare externally-threaded shaft, sitting at z = 0. Use it only when the thread IS the whole
+      part (a threaded rod). It cannot be combined with anything — see the warning below.
+
+  porcaRoscada({ tamanho, passo?, chave?, altura?, folga? })
+    → a COMPLETE hex nut with an internal thread. \`chave\`/\`altura\` default to DIN 934.
+      \`folga\` is radial clearance; 0.25 mm threads well in PLA.
+
+  engrenagemReta({ modulo, dentes, largura, furo?, anguloPressao?, folga? })
+    → involute spur gear. Two gears of the same \`modulo\` always mesh, at a centre distance of
+      modulo × (dentes₁ + dentes₂) ÷ 2. Say that distance in \`printNotes\` when you make a pair.
+
+  bolsaPorca({ tamanho, folga?, canal? })      → CUTTING TOOL: pocket for a real hex nut.
+      \`canal\` adds a side insertion slot along +X so the nut slides in after printing.
+  furoParafuso({ tamanho, profundidade, folga?, cabeca? })  → CUTTING TOOL: clearance hole.
+      \`cabeca: 'rebaixado'\` adds a counterbore for a DIN 912 head.
+  furoInserto({ tamanho, furo?, profundidade? })            → CUTTING TOOL: hole for a heat-set
+      brass insert. THIS is the right way to get a threaded hole in an FDM part.
+  passoGrosso(diametro) → the ISO coarse pitch, in mm.
+
+The ones marked CUTTING TOOL are meant to be \`subtract\`ed from your part; they already overshoot
+the surface they cross. The others are finished solids.
+
+**A thread must never take part in a boolean.** Not \`subtract(bloco, roscaMetrica(...))\`, not
+\`union(cabeca, roscaMetrica(...))\` — the CSG kernel tears the mesh open on the helix, in both
+directions, at every resolution. So:
+  - bolt or screw          → \`parafusoSextavado\` (complete part, no boolean)
+  - nut                    → \`porcaRoscada\` (complete part, no boolean)
+  - threaded hole in a part you designed → \`furoInserto\` (heat-set insert). This is the right
+    answer for FDM anyway: a small printed internal thread strips, a brass insert does not.
+If the user insists on a printed threaded hole in a custom part, say plainly in \`printNotes\` that
+it is not reliable here and offer the insert instead.
+
 - Signatures that matter (get these exactly right):
   cuboid({ size: [x, y, z] })                       // centred at origin
   cylinder({ radius, height, segments })            // axis = Z, centred at origin

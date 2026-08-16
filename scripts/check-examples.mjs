@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module'
 import { EXAMPLES } from '../src/data/examples.ts'
+import { STANDARD_PARTS } from '../src/lib/standardParts.ts'
 
 // Os pacotes do JSCAD são CommonJS; no Node puro o require dá o objeto completo
 // (o bundler resolve os exports nomeados por conta própria no navegador).
@@ -10,7 +11,7 @@ const stlSerializer = require('@jscad/stl-serializer')
 const SCOPE = {
   ...jscad.primitives, ...jscad.booleans, ...jscad.transforms, ...jscad.extrusions,
   ...jscad.expansions, ...jscad.hulls, ...jscad.text, ...jscad.measurements,
-  ...jscad.modifiers, ...jscad.utils,
+  ...jscad.modifiers, ...jscad.utils, ...STANDARD_PARTS,
   maths: jscad.maths, geometries: jscad.geometries, colors: jscad.colors, curves: jscad.curves,
   jscad, TAU: Math.PI * 2,
 }

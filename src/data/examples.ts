@@ -207,6 +207,94 @@ export const EXAMPLES: CadModel[] = [
 }`,
   },
   {
+    name: 'Engrenagem reta',
+    summary:
+      'Engrenagem de perfil evolvente com cubo reforçado e rasgo de chaveta. Duas de mesmo módulo sempre se encaixam.',
+    printNotes:
+      'Imprima deitada, sem suporte, com pelo menos 4 perímetros — o dente sofre no contato. Para um par, a distância entre centros é módulo × (dentes desta + dentes da outra) ÷ 2. Se as duas travarem, aumente a folga em 0,05 mm por vez.',
+    params: [
+      { name: 'modulo', label: 'Módulo', type: 'number', default: 2, min: 0.5, max: 5, step: 0.25, unit: 'mm' },
+      { name: 'dentes', label: 'Número de dentes', type: 'number', default: 20, min: 8, max: 60, step: 1 },
+      { name: 'largura', label: 'Largura do dente', type: 'number', default: 8, min: 3, max: 25, step: 0.5, unit: 'mm' },
+      { name: 'eixo', label: 'Diâmetro do eixo', type: 'number', default: 5, min: 2, max: 20, step: 0.5, unit: 'mm' },
+      { name: 'folga', label: 'Folga entre dentes', type: 'number', default: 0.1, min: 0, max: 0.5, step: 0.05, unit: 'mm' },
+      { name: 'cubo', label: 'Cubo saliente', type: 'boolean', default: true },
+    ],
+    code: `function main(params = {}) {
+  const {
+    modulo = 2,
+    dentes = 20,
+    largura = 8,
+    eixo = 5,
+    folga = 0.1,
+    cubo = true,
+  } = params
+
+  // engrenagemReta já entrega o perfil evolvente correto — não vale a pena
+  // aproximar o dente à mão, o erro só aparece quando as duas não engrenam.
+  const roda = engrenagemReta({ modulo, dentes, largura, folga })
+
+  const alturaCubo = cubo ? largura * 0.6 : 0
+  const corpo = cubo
+    ? union(
+        roda,
+        translate(
+          [0, 0, largura + alturaCubo / 2],
+          cylinder({ radius: eixo * 1.6, height: alturaCubo, segments: 48 })
+        )
+      )
+    : roda
+
+  const furo = translate(
+    [0, 0, -1],
+    cylinder({ radius: eixo / 2, height: largura + alturaCubo + 2, segments: 48 })
+  )
+
+  // Rasgo de chaveta: trava a roda no eixo em vez de deixá-la patinar. Só cabe
+  // se sobrar parede até a raiz do dente — em engrenagem pequena, não sobra.
+  const raioRaiz = (modulo * dentes) / 2 - 1.25 * modulo
+  const folgaAteRaiz = raioRaiz - eixo / 2
+  const cortes = [furo]
+
+  if (folgaAteRaiz > 1.5) {
+    const lado = Math.min(eixo * 0.35, (folgaAteRaiz - 1) * 2)
+    cortes.push(
+      translate(
+        [0, eixo / 2, (largura + alturaCubo) / 2],
+        cuboid({ size: [lado, lado, largura + alturaCubo + 2] })
+      )
+    )
+  }
+
+  return subtract(corpo, ...cortes)
+}`,
+  },
+  {
+    name: 'Parafuso M8',
+    summary:
+      'Parafuso de rosca métrica ISO com cabeça sextavada, gerado a partir da tabela de passo grosso.',
+    printNotes:
+      'Imprima em pé, cabeça na mesa, camada de 0,12 mm e sem suporte — a rosca sai definida. Para a porca correspondente, peça "a porca deste parafuso"; a folga de 0,25 mm rosqueia bem em PLA.',
+    params: [
+      { name: 'diametro', label: 'Diâmetro nominal', type: 'number', default: 8, min: 3, max: 20, step: 1, unit: 'mm' },
+      { name: 'comprimento', label: 'Comprimento da rosca', type: 'number', default: 25, min: 6, max: 80, step: 1, unit: 'mm' },
+      { name: 'alturaCabeca', label: 'Altura da cabeça', type: 'number', default: 5.5, min: 2, max: 15, step: 0.5, unit: 'mm' },
+    ],
+    code: `function main(params = {}) {
+  const { diametro = 8, comprimento = 25, alturaCabeca = 5.5 } = params
+
+  // parafusoSextavado devolve cabeça e rosca numa superfície fechada só. Unir a
+  // rosca a outro sólido com union() não funciona: o CSG rasga a malha na
+  // hélice, então a peça inteira é descrita de uma vez.
+  return parafusoSextavado({
+    diametro,
+    comprimento,
+    alturaCabeca,
+    chave: diametro * 1.5,
+  })
+}`,
+  },
+  {
     name: 'Chaveiro com nome',
     summary:
       'Plaquinha arredondada com texto em relevo e furo para argola. O texto é gerado a partir do parâmetro de altura das letras.',

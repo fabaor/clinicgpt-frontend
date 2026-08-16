@@ -1,17 +1,13 @@
 /// <reference lib="webworker" />
-import * as jscadNamespace from '@jscad/modeling'
 import stlSerializerModule from '@jscad/stl-serializer'
+import { jscad } from './jscadRuntime'
+import { STANDARD_PARTS } from './standardParts'
 import type { BuildStats, BuildWarning, PrinterProfile } from '../types'
-
-// @jscad/modeling é CommonJS: dependendo do bundler os módulos chegam como
-// exports nomeados ou embrulhados em `default`. Aceitamos as duas formas.
-const jscad = ((jscadNamespace as { default?: typeof jscadNamespace }).default ??
-  jscadNamespace) as typeof jscadNamespace
 
 const stlSerializer = ((stlSerializerModule as { default?: typeof stlSerializerModule })
   .default ?? stlSerializerModule) as typeof stlSerializerModule
 
-type Geom3 = ReturnType<typeof jscad.primitives.cube>
+import type { Geom3 } from './jscadRuntime'
 
 type BuildRequest = {
   type: 'build'
@@ -45,6 +41,7 @@ const SCOPE: Record<string, unknown> = {
   ...jscad.measurements,
   ...jscad.modifiers,
   ...jscad.utils,
+  ...STANDARD_PARTS,
   maths: jscad.maths,
   geometries: jscad.geometries,
   colors: jscad.colors,
