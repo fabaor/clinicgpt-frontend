@@ -11,6 +11,9 @@ import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { deflateSync } from 'node:zlib'
+
+const zlibSync = (buffer) => deflateSync(buffer)
 
 /**
  * Usa o Chromium já presente em PLAYWRIGHT_BROWSERS_PATH mesmo quando a revisão
@@ -101,6 +104,53 @@ page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`))
 
 const step = (name) => console.log(`  ${name}`)
 
+/** PNG 8x8 cinza, montado à mão para o teste não depender de nenhum arquivo. */
+function pngDeTeste() {
+  const crcTabela = []
+  for (let n = 0; n < 256; n++) {
+    let c = n
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    crcTabela[n] = c >>> 0
+  }
+  const crc = (buf) => {
+    let c = 0xffffffff
+    for (const byte of buf) c = crcTabela[(c ^ byte) & 0xff] ^ (c >>> 8)
+    return (c ^ 0xffffffff) >>> 0
+  }
+  const bloco = (tipo, dados) => {
+    const corpo = Buffer.concat([Buffer.from(tipo, 'ascii'), dados])
+    const tamanho = Buffer.alloc(4)
+    tamanho.writeUInt32BE(dados.length)
+    const checagem = Buffer.alloc(4)
+    checagem.writeUInt32BE(crc(corpo))
+    return Buffer.concat([tamanho, corpo, checagem])
+  }
+
+  const lado = 8
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(lado, 0)
+  ihdr.writeUInt32BE(lado, 4)
+  ihdr[8] = 8 // bits por canal
+  ihdr[9] = 0 // escala de cinza
+
+  // Uma faixa escura no meio, para a imagem não ser uniforme.
+  const linhas = []
+  for (let y = 0; y < lado; y++) {
+    const linha = Buffer.alloc(lado + 1)
+    linha[0] = 0 // sem filtro
+    linha.fill(y > 2 && y < 6 ? 0x20 : 0xe0, 1)
+    linhas.push(linha)
+  }
+  const comprimido = zlibSync(Buffer.concat(linhas))
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    bloco('IHDR', ihdr),
+    bloco('IDAT', comprimido),
+    bloco('IEND', Buffer.alloc(0)),
+  ])
+}
+
 try {
   await page.goto(base, { waitUntil: 'networkidle' })
   step('página carregada')
@@ -164,10 +214,12 @@ try {
 
   // Caminho da geração, com a API mockada: prova que a resposta em tool_use vira
   // parâmetros na tela e peça no visualizador.
+  let corpoEnviado = null
   await page.route('https://api.anthropic.com/**', async (route) => {
     if (route.request().method() === 'OPTIONS') {
       return route.fulfill({ status: 204, headers: CORS })
     }
+    corpoEnviado = JSON.parse(route.request().postData() ?? '{}')
     return route.fulfill({
       status: 200,
       headers: { ...CORS, 'content-type': 'application/json' },
@@ -191,6 +243,44 @@ try {
   const sliders = await page.locator('.param__slider').count()
   step(`${sliders} parâmetros renderizados`)
   if (sliders !== 3) throw new Error(`esperava 3 parâmetros, vieram ${sliders}`)
+
+  // Foto como especificação: o arquivo tem que virar bloco `image` na requisição.
+  await page.setInputFiles('.anexos__input', {
+    name: 'peca.png',
+    mimeType: 'image/png',
+    buffer: pngDeTeste(),
+  })
+  await page.locator('.anexo img').waitFor({ timeout: 10000 })
+  const miniaturas = await page.locator('.anexo').count()
+  step(`${miniaturas} miniatura(s) anexada(s)`)
+
+  await page.locator('#instrucao').fill('faça uma peça como a da foto')
+  await page.getByRole('button', { name: 'Ajustar peça' }).click()
+  await page.waitForFunction(() => !document.querySelector('.stage__status'), { timeout: 20000 })
+
+  const ultima = corpoEnviado?.messages?.at(-1)
+  const blocos = Array.isArray(ultima?.content) ? ultima.content : []
+  const imagem = blocos.find((bloco) => bloco.type === 'image')
+  const texto = blocos.find((bloco) => bloco.type === 'text')
+
+  if (!imagem) throw new Error('a requisição não levou nenhum bloco de imagem')
+  if (imagem.source?.type !== 'base64') throw new Error('bloco de imagem sem source base64')
+  // Reencodamos tudo para JPEG antes de enviar, mesmo tendo anexado um PNG.
+  if (imagem.source.media_type !== 'image/jpeg') {
+    throw new Error(`esperava image/jpeg, veio ${imagem.source.media_type}`)
+  }
+  if (!imagem.source.data || imagem.source.data.length < 100) {
+    throw new Error('bloco de imagem sem dados')
+  }
+  if (blocos.indexOf(imagem) > blocos.indexOf(texto)) {
+    throw new Error('a imagem deveria vir antes do texto')
+  }
+  step(`bloco image enviado: ${imagem.source.media_type}, ${Math.round(imagem.source.data.length * 0.75 / 1024)} KB`)
+
+  // Anexos limpam após o envio, para a foto não grudar no próximo pedido.
+  if ((await page.locator('.anexo').count()) !== 0) {
+    throw new Error('as miniaturas continuaram na tela depois de gerar')
+  }
 
   if (problems.length > 0) throw new Error(`erros no console:\n${problems.join('\n')}`)
 

@@ -1,4 +1,5 @@
-import type { CadModel, ChatTurn, ParamSpec, PrinterProfile } from '../types'
+import type { ImageAttachment } from './image'
+import type { CadModel, ChatTurn, ContentBlock, ParamSpec, PrinterProfile } from '../types'
 import { EMIT_TOOL, buildSystemPrompt } from './prompt'
 
 export const MODELS = [
@@ -22,6 +23,8 @@ export class GenerationError extends Error {}
 
 export type GenerateOptions = {
   instruction: string
+  /** Fotos da peça, do encaixe ou do desenho, enviadas junto com a descrição. */
+  images?: readonly ImageAttachment[]
   history: ChatTurn[]
   printer: PrinterProfile
   model: string
@@ -31,7 +34,7 @@ export type GenerateOptions = {
 }
 
 export async function generateModel(options: GenerateOptions): Promise<CadModel> {
-  const { instruction, history, printer, model, credential, signal } = options
+  const { instruction, images = [], history, printer, model, credential, signal } = options
 
   if (!credential.trim()) {
     throw new GenerationError(
@@ -43,7 +46,7 @@ export async function generateModel(options: GenerateOptions): Promise<CadModel>
 
   const messages = [
     ...history.map((turn) => ({ role: turn.role, content: turn.content })),
-    { role: 'user' as const, content: instruction },
+    { role: 'user' as const, content: montarConteudo(instruction, images) },
   ]
 
   const body = {
@@ -99,6 +102,27 @@ export async function generateModel(options: GenerateOptions): Promise<CadModel>
   }
 
   return normalizeModel(toolUse.input)
+}
+
+/**
+ * Com imagem, o conteúdo vira lista de blocos. As imagens vêm antes do texto:
+ * é a ordem que a documentação da API recomenda quando o texto se refere a elas.
+ */
+export function montarConteudo(
+  instruction: string,
+  images: readonly ImageAttachment[],
+): string | ContentBlock[] {
+  if (images.length === 0) return instruction
+
+  return [
+    ...images.map(
+      (imagem): ContentBlock => ({
+        type: 'image',
+        source: { type: 'base64', media_type: imagem.mediaType, data: imagem.data },
+      }),
+    ),
+    { type: 'text', text: instruction },
+  ]
 }
 
 async function describeHttpError(response: Response): Promise<string> {

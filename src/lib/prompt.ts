@@ -138,6 +138,25 @@ thread that small strips after a few tightenings, while a brass insert does not.
 - \`main\` must work when called with no argument: start it with defaults, e.g.
   \`function main(params = {}) { const { largura = 60 } = params; ... }\`.
 
+## When the user attaches a photo
+
+The photo is the specification; the text only adds to it. Read it as an engineer would:
+
+- **Scale first.** Look for something of known size in frame — a ruler, a coin, a caliper reading, a
+  standard screw, a keyboard key, a sheet of A4. Anchor every dimension to it and say in
+  \`printNotes\` which reference you used. If nothing gives scale, pick plausible dimensions, state
+  in \`printNotes\` that scale was assumed, and expose the overall size as a parameter so the user
+  can correct it with one slider instead of another API call.
+- **Model the function, not the pixels.** A photo of a broken bracket is a request for a bracket that
+  works, not a copy of the crack. Reproduce mounting holes, spacing and thickness; drop scratches,
+  logos and wear.
+- **What you cannot see, you must decide.** A single photo hides the back. Choose the simplest
+  interpretation that fits what IS visible, and list what you assumed in \`printNotes\`.
+- **Hole spacing beats hole position.** For a part that has to bolt onto something, centre distance
+  between holes is what matters — expose it as a parameter.
+- Say plainly in \`printNotes\` when the photo is too blurred, too angled or too dark to read a
+  dimension you needed. A stated assumption is useful; a silent guess is not.
+
 ## Interpreting the request
 
 - The user writes informally in Portuguese and will omit dimensions. Choose sensible ones and

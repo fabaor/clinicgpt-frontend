@@ -53,7 +53,16 @@ export type PrinterProfile = {
   nozzle: number
 }
 
+/** Blocos no formato que a Messages API espera. */
+export type ContentBlock =
+  | { type: 'text'; text: string }
+  | {
+      type: 'image'
+      source: { type: 'base64'; media_type: string; data: string }
+    }
+
 export type ChatTurn = {
   role: 'user' | 'assistant'
-  content: string
+  /** Texto puro, ou blocos quando o turno leva imagem junto. */
+  content: string | ContentBlock[]
 }

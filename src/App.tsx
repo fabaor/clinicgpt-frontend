@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ImageAttachments } from './components/ImageAttachments'
 import { InspectorPanel } from './components/InspectorPanel'
 import { ParamControls } from './components/ParamControls'
 import { Viewer } from './components/Viewer'
 import { EXAMPLES } from './data/examples'
 import { FILAMENTS, PRINTERS } from './data/printers'
-import { GenerationError, MODELS, generateModel, usesProxy } from './lib/anthropic'
+import { GenerationError, MODELS, generateModel, montarConteudo, usesProxy } from './lib/anthropic'
 import { CadClient } from './lib/cadClient'
+import { prepararVarias } from './lib/image'
+import type { ImageAttachment } from './lib/image'
 import type { BuildResult, CadModel, ChatTurn } from './types'
 
 // No modo proxy a credencial é o código de acesso do site; no modo direto, a
@@ -27,6 +30,8 @@ export default function App() {
   const [history, setHistory] = useState<ChatTurn[]>(() => historyForExample(EXAMPLES[0]))
 
   const [instruction, setInstruction] = useState('')
+  const [imagens, setImagens] = useState<ImageAttachment[]>([])
+  const [arrastando, setArrastando] = useState(false)
   const [result, setResult] = useState<BuildResult | null>(null)
   const [buildError, setBuildError] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
@@ -93,8 +98,17 @@ export default function App() {
 
   const isRefinement = history.length > 0
 
+  async function adicionarImagens(arquivos: File[]) {
+    const { imagens: novas, erros } = await prepararVarias(arquivos, imagens.length)
+    if (novas.length > 0) setImagens((atual) => [...atual, ...novas])
+    setGenerationError(erros.length > 0 ? erros.join(' ') : null)
+  }
+
   async function handleGenerate(startOver: boolean) {
-    const text = instruction.trim()
+    // Só a foto já basta para pedir uma peça; nesse caso a instrução é implícita.
+    const text =
+      instruction.trim() ||
+      (imagens.length > 0 ? 'Modele a peça da foto, pronta para imprimir.' : '')
     if (!text || isGenerating) return
 
     abortRef.current?.abort()
@@ -108,6 +122,7 @@ export default function App() {
       const turns = startOver ? [] : contextTurns(history, model, code, values)
       const generated = await generateModel({
         instruction: text,
+        images: imagens,
         history: turns,
         printer,
         model: modelId,
@@ -116,12 +131,15 @@ export default function App() {
       })
 
       applyModel(generated)
+      // As imagens ficam no histórico junto do turno que as enviou: um ajuste
+      // seguinte ("aumenta 2 mm") precisa continuar enxergando a foto.
       setHistory([
         ...turns,
-        { role: 'user', content: text },
+        { role: 'user', content: montarConteudo(text, imagens) },
         { role: 'assistant', content: describe(generated, defaultsOf(generated)) },
       ])
       setInstruction('')
+      setImagens([])
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
       setGenerationError(
@@ -145,6 +163,7 @@ export default function App() {
     abortRef.current?.abort()
     applyModel(example)
     setHistory(historyForExample(example))
+    setImagens([])
     setGenerationError(null)
   }
 
@@ -227,6 +246,7 @@ export default function App() {
             </label>
             <textarea
               id="instrucao"
+              className={arrastando ? 'prompt__campo prompt__campo--soltar' : 'prompt__campo'}
               rows={4}
               placeholder={
                 isRefinement
@@ -240,13 +260,42 @@ export default function App() {
                   void handleGenerate(false)
                 }
               }}
+              onPaste={(event) => {
+                const arquivos = Array.from(event.clipboardData.files)
+                if (arquivos.length > 0) {
+                  event.preventDefault()
+                  void adicionarImagens(arquivos)
+                }
+              }}
+              onDragOver={(event) => {
+                if (event.dataTransfer.types.includes('Files')) {
+                  event.preventDefault()
+                  setArrastando(true)
+                }
+              }}
+              onDragLeave={() => setArrastando(false)}
+              onDrop={(event) => {
+                const arquivos = Array.from(event.dataTransfer.files)
+                if (arquivos.length > 0) {
+                  event.preventDefault()
+                  void adicionarImagens(arquivos)
+                }
+                setArrastando(false)
+              }}
+            />
+
+            <ImageAttachments
+              imagens={imagens}
+              disabled={isGenerating}
+              onAdicionar={(arquivos) => void adicionarImagens(arquivos)}
+              onRemover={(id) => setImagens((atual) => atual.filter((item) => item.id !== id))}
             />
 
             <div className="prompt__actions">
               <button
                 className="button"
                 type="button"
-                disabled={isGenerating || !instruction.trim()}
+                disabled={isGenerating || (!instruction.trim() && imagens.length === 0)}
                 onClick={() => void handleGenerate(false)}
               >
                 {isGenerating ? 'Modelando…' : isRefinement ? 'Ajustar peça' : 'Gerar peça'}

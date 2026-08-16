@@ -59,6 +59,21 @@ contrário do pareamento de arestas, que acusaria buraco em quase toda peça boo
 Também avisa quando a peça não cabe na mesa (dizendo se rodar 90° resolve), quando a base não está
 em Z=0 e quando a malha ficou pesada demais para o fatiador.
 
+## Foto como especificação
+
+Anexe uma ou mais fotos (arraste, cole ou escolha) e o modelo as lê junto com a descrição. É o
+caminho para "esta peça quebrou, faça outra": fotografe com uma régua ou paquímetro ao lado e ele
+ancora as medidas na referência.
+
+As imagens são reduzidas para 1568 px no lado maior e reencodadas em JPEG antes de sair do
+navegador — acima disso a API reduz sozinha, então mandar maior só gasta banda. Elas ficam no
+histórico junto do turno que as enviou, para um ajuste seguinte ("aumenta 2 mm") continuar
+enxergando a foto.
+
+O prompt instrui o modelo a ancorar a escala numa referência visível e a **declarar nas notas de
+impressão** qual usou — ou dizer que assumiu, quando não há nenhuma. Suposição declarada é útil;
+palpite silencioso não. HEIC do iPhone não abre no navegador; o app avisa e diz como converter.
+
 ## Rodando
 
 ```bash
