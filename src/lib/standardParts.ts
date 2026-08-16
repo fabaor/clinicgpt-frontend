@@ -14,11 +14,11 @@ const { translate } = jscad.transforms
  * e não rosqueia. Aqui a geometria é a da norma, e os testes conferem as
  * dimensões contra a tabela.
  *
- * Rosca e porca são geradas como poliedro paramétrico, sem booleano nenhum. Não
- * é preciosismo: o CSG do JSCAD não corta hélice de forma confiável — testamos
- * 36 combinações de resolução e modificadores e todas produziram malha aberta.
- * Descrevendo a superfície direto, a peça sai fechada por construção e ~20×
- * mais rápida.
+ * Rosca, porca e parafuso são descritos como poliedro paramétrico em vez de
+ * montados com booleanos. Isso nasceu de necessidade — o BSP do JSCAD rasgava a
+ * malha em qualquer operação com hélice — e ficou por mérito: sai fechado por
+ * construção e ~20× mais rápido que montar por partes. Com os booleanos agora no
+ * Manifold, essas peças também podem ser combinadas livremente com outras.
  */
 
 /** Passo grosso ISO 261, em mm, por diâmetro nominal. */
@@ -105,21 +105,19 @@ export type RoscaOptions = {
   altura: number
   /** Passo em mm. Omitido, usa o passo grosso ISO do diâmetro. */
   passo?: number
+  /** Folga radial somada ao diâmetro. Usada ao gerar ferramenta de corte. */
+  folga?: number
   segmentos?: number
 }
 
 /**
  * Eixo com rosca métrica externa (o corpo de um parafuso), apoiado em z = 0 e
- * com a altura exata pedida. Una-o à cabeça que você modelar.
- *
- * Para rosca fêmea use `porcaRoscada` (peça inteira) ou `furoInserto` (o
- * caminho recomendado em FDM). Cortar rosca dentro de geometria qualquer não é
- * confiável neste kernel.
+ * com a altura exata pedida. Pode ser unido a outros sólidos normalmente.
  */
 export function roscaMetrica(options: RoscaOptions): Geom3 {
-  const { diametro, altura, segmentos = 48 } = options
+  const { diametro, altura, folga = 0, segmentos = 48 } = options
   const passo = options.passo ?? passoGrosso(diametro)
-  const raio = perfilRosca(passo, diametro / 2)
+  const raio = perfilRosca(passo, diametro / 2 + folga)
   const linhas = linhasDe(altura, passo)
 
   const pontos: Array<[number, number, number]> = []
@@ -368,6 +366,12 @@ export function engrenagemReta(options: EngrenagemOptions): Geom3 {
     flanco.push([raioBase / Math.cos(angulo), involuta(angulo)])
   }
 
+  // Folga angular no fundo do vão. Fixá-la em 0,02 rad fazia os dois pontos do
+  // fundo se cruzarem em engrenagem de muitos dentes, onde o vão é estreito —
+  // polígono auto-intersectante, peça inválida.
+  const passoAngular = (Math.PI * 2) / dentes
+  const vao = Math.min(0.02, Math.max(0, (passoAngular - 2 * meioDente) * 0.25))
+
   const pontos: Array<[number, number]> = []
   for (let dente = 0; dente < dentes; dente++) {
     const base = (Math.PI * 2 * dente) / dentes
@@ -386,7 +390,6 @@ export function engrenagemReta(options: EngrenagemOptions): Geom3 {
       ])
     }
 
-    const vao = 0.02
     pontos.push([raioDedendo * Math.cos(base + meioDente + vao), raioDedendo * Math.sin(base + meioDente + vao)])
     pontos.push([raioDedendo * Math.cos(proximo - meioDente - vao), raioDedendo * Math.sin(proximo - meioDente - vao)])
   }
@@ -501,6 +504,33 @@ export function furoInserto(options: FuroInsertoOptions): Geom3 {
   )
 }
 
+export type FuroRoscadoOptions = {
+  /** Tamanho nominal do parafuso que vai entrar: 6 para M6, e assim por diante. */
+  tamanho: number
+  profundidade: number
+  passo?: number
+  /** Folga radial. 0,25 mm rosqueia bem em PLA; 0,35 mm entra mais fácil. */
+  folga?: number
+  segmentos?: number
+}
+
+/**
+ * Ferramenta de corte para abrir rosca fêmea numa peça sua: subtraia-a.
+ * Ultrapassa z = 0 por baixo, como toda ferramenta de corte.
+ *
+ * Para peça FDM pequena, `furoInserto` ainda costuma ser a escolha melhor —
+ * rosca impressa em M3 ou M4 espana com pouco aperto.
+ */
+export function furoRoscado(options: FuroRoscadoOptions): Geom3 {
+  const { tamanho, profundidade, folga = 0.25, segmentos = 48 } = options
+  const passo = options.passo ?? passoGrosso(tamanho)
+
+  return translate(
+    [0, 0, -0.5],
+    roscaMetrica({ diametro: tamanho, altura: profundidade + 1, passo, folga, segmentos }),
+  )
+}
+
 /** Tudo que fica disponível no escopo do código gerado. */
 export const STANDARD_PARTS = {
   roscaMetrica,
@@ -510,5 +540,6 @@ export const STANDARD_PARTS = {
   bolsaPorca,
   furoParafuso,
   furoInserto,
+  furoRoscado,
   passoGrosso,
 }

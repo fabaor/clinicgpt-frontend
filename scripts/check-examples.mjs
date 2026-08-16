@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module'
+import ManifoldModule from 'manifold-3d'
 import { EXAMPLES } from '../src/data/examples.ts'
 import { STANDARD_PARTS } from '../src/lib/standardParts.ts'
+import { createManifoldOps } from '../src/lib/manifoldOps.ts'
 
 // Os pacotes do JSCAD são CommonJS; no Node puro o require dá o objeto completo
 // (o bundler resolve os exports nomeados por conta própria no navegador).
@@ -8,12 +10,18 @@ const require = createRequire(import.meta.url)
 const jscad = require('@jscad/modeling')
 const stlSerializer = require('@jscad/stl-serializer')
 
+const wasm = await ManifoldModule()
+wasm.setup()
+const ops = createManifoldOps(wasm)
+
 const SCOPE = {
   ...jscad.primitives, ...jscad.booleans, ...jscad.transforms, ...jscad.extrusions,
   ...jscad.expansions, ...jscad.hulls, ...jscad.text, ...jscad.measurements,
   ...jscad.modifiers, ...jscad.utils, ...STANDARD_PARTS,
   maths: jscad.maths, geometries: jscad.geometries, colors: jscad.colors, curves: jscad.curves,
   jscad, TAU: Math.PI * 2,
+  // Mesma troca que o worker faz: booleanos pelo Manifold.
+  union: ops.union, subtract: ops.subtract, intersect: ops.intersect,
 }
 
 /** Mesmo teste de fechamento usado no worker: soma das normais ponderadas por área. */
@@ -59,7 +67,7 @@ for (const example of EXAMPLES) {
       const leak = measureLeak(polys)
       const bytes = stlSerializer.serialize({ binary: true }, geometry).reduce((s, b) => s + (b.byteLength ?? b.length), 0)
       const dims = [max[0] - min[0], max[1] - min[1], max[2] - min[2]].map((d) => d.toFixed(1)).join(' x ')
-      const partes = polys.length > 20000 ? 1 : jscad.booleans.scission(geometry).length
+      const partes = ops.contarPartes(geometry)
       const aberta = leak > 1e-4
       const zForaDaMesa = Math.abs(min[2]) > 0.05
       if (aberta || zForaDaMesa || partes > 1) failures++

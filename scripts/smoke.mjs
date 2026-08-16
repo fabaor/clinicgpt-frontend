@@ -35,6 +35,8 @@ const TYPES = {
   '.js': 'text/javascript',
   '.css': 'text/css',
   '.json': 'application/json',
+  // Sem este, o navegador recusa a compilação em streaming do WASM.
+  '.wasm': 'application/wasm',
 }
 
 const CORS = {

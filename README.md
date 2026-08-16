@@ -20,8 +20,34 @@ sem gastar outra chamada de API, e dá para ler e corrigir o que foi feito.
    lista de parâmetros e o código.
 3. O código roda num **Web Worker**, com a API do [JSCAD](https://openjscad.xyz/) no escopo e mais
    nada — sem DOM, sem rede, sem `import`. Se travar, o worker é morto em 20 s e recriado.
+   Os booleanos são do [Manifold](https://github.com/elalish/manifold), não do JSCAD (veja abaixo).
 4. A malha é medida (dimensões, volume, massa estimada) e checada antes de virar arquivo.
 5. `@jscad/stl-serializer` gera o STL binário; o ASCII fica disponível para inspeção.
+
+### Booleanos: Manifold, não JSCAD
+
+`union`, `subtract` e `intersect` são substituídos no escopo do worker por versões apoiadas no
+Manifold (WASM). **O código gerado não muda** — mesma assinatura, mesma API — mas o kernel por trás
+passa a garantir saída manifold.
+
+O BSP do JSCAD rasgava a malha em geometria densa. Hélice de rosca era o caso extremo (36
+combinações de resolução e modificadores testadas, todas com malha aberta), mas casos mais brandos
+viravam os avisos de "malha aberta" que o app mostrava. Depois da troca:
+
+| | JSCAD (BSP) | Manifold |
+| --- | --- | --- |
+| Furo roscado num bloco | malha aberta, 23 pedaços | fechada, 1 peça |
+| Unir rosca a um flange | malha aberta, 20 pedaços | fechada, 1 peça |
+| Corte coplanar com a face | risco de malha rasgada | fechada |
+| Vazamento nos exemplos | 1e-13 a 1e-16 | **exatamente 0** na maioria |
+| STL do chaveiro | 103 KB / 2.116 tri | 69 KB / 1.416 tri |
+
+`scripts/check-manifold.mjs` trava cada operação que antes falhava. Geometria 2D continua no JSCAD:
+o BSP dá conta de polígono plano sem dificuldade.
+
+A troca também revelou um bug latente meu — a engrenagem com muitos dentes gerava polígono
+auto-intersectante, que o BSP engolia calado e o Manifold recusa. Um kernel que reclama é melhor
+que um que entrega peça quebrada.
 
 ### A verificação que importa
 
@@ -83,10 +109,12 @@ O código é comparado em tempo constante, e os exemplos continuam funcionando s
 ## Testes
 
 ```bash
+npm run test:parts      # cotas das peças normalizadas contra a tabela (ISO 261, DIN 934, DIN 912)
+npm run test:manifold   # trava as operações que o BSP do JSCAD não conseguia fazer
 npm run test:examples   # constrói cada exemplo com mínimos, máximos e padrões; checa fechamento
 npm run test:smoke      # navegador de verdade: renderiza, mexe em parâmetro, baixa e valida o STL
 npm run test:proxy      # build de produção: campo de chave some, código errado barra, certo gera
-npm test                # os três
+npm test                # os cinco
 ```
 
 O smoke test valida o cabeçalho do STL binário (`84 + 50 × triângulos` bytes) e falha se qualquer
@@ -99,6 +127,8 @@ erro aparecer no console.
 | `src/lib/prompt.ts` | O prompt de CAD: API disponível, regras de geometria e de impressão |
 | `src/lib/anthropic.ts` | Chamada da API e normalização da resposta |
 | `src/lib/cad.worker.ts` | Executa o código, mede, verifica o fechamento e serializa o STL |
+| `src/lib/manifoldOps.ts` | Booleanos pelo Manifold, com a mesma assinatura do JSCAD |
+| `src/lib/standardParts.ts` | Rosca, porca, parafuso, engrenagem e ferramentas de corte |
 | `src/lib/cadClient.ts` | Ponte com o worker, com timeout e recriação |
 | `src/components/Viewer.tsx` | Cena three.js com a mesa da impressora em escala |
 | `src/data/examples.ts` | Peças prontas que funcionam sem chave |
@@ -117,17 +147,17 @@ gera a geometria da norma, e `npm run test:parts` confere cada cota contra a tab
 | `engrenagemReta({ modulo, dentes, largura })` | Engrenagem de perfil evolvente |
 | `bolsaPorca`, `furoParafuso`, `furoInserto` | Ferramentas de corte para subtrair |
 
-### Rosca não entra em booleano
+| `furoRoscado({ tamanho, profundidade, folga })` | Ferramenta para abrir rosca fêmea |
 
-Descoberto testando, não supondo: o CSG do JSCAD **rasga a malha** ao unir ou subtrair uma hélice.
-Testamos 36 combinações de resolução, modificadores (`snap`, `retessellate`) e estratégias de corte
-— todas produziram malha aberta e peça em pedaços.
+### Por que rosca é poliedro e não montagem
 
-Por isso rosca, porca e parafuso são gerados como **poliedro paramétrico**, descrevendo a superfície
-diretamente. Sai fechado por construção, dimensionalmente exato e ~20× mais rápido. A consequência
-é que essas peças vêm inteiras e não podem ser combinadas: para rosca fêmea numa peça sua, use
-`furoInserto` — que é o que se deve fazer em FDM de qualquer forma, já que rosca impressa pequena
-espana e inserto de latão não.
+Rosca, porca e parafuso são descritos como **poliedro paramétrico** em vez de montados com
+booleanos. Isso nasceu de necessidade (o BSP do JSCAD não conseguia) e ficou por mérito: sai fechado
+por construção, dimensionalmente exato e ~20× mais rápido que montar por partes. Com os booleanos no
+Manifold, essas peças também podem ser combinadas livremente com qualquer outra geometria.
+
+Para rosca fêmea em M2–M4, `furoInserto` ainda é a escolha melhor: rosca impressa nesse tamanho
+espana com pouco aperto, inserto de latão não. De M5 para cima, `furoRoscado` funciona bem.
 
 ## Limites conhecidos
 

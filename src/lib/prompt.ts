@@ -43,9 +43,12 @@ do not fit. These generators are already in scope, dimensionally verified agains
     → a COMPLETE hex-head bolt, head and thread in one closed surface, sitting at z = 0.
       Use this whenever the user asks for a bolt or screw.
 
-  roscaMetrica({ diametro, altura, passo?, segmentos? })
-    → a bare externally-threaded shaft, sitting at z = 0. Use it only when the thread IS the whole
-      part (a threaded rod). It cannot be combined with anything — see the warning below.
+  roscaMetrica({ diametro, altura, passo?, folga?, segmentos? })
+    → a bare externally-threaded shaft, sitting at z = 0. Union it with whatever you like.
+
+  furoRoscado({ tamanho, profundidade, passo?, folga? })
+    → CUTTING TOOL: subtract it to tap a female thread into a part you designed.
+      \`folga\` 0.25 mm threads well in PLA.
 
   porcaRoscada({ tamanho, passo?, chave?, altura?, folga? })
     → a COMPLETE hex nut with an internal thread. \`chave\`/\`altura\` default to DIN 934.
@@ -66,15 +69,9 @@ do not fit. These generators are already in scope, dimensionally verified agains
 The ones marked CUTTING TOOL are meant to be \`subtract\`ed from your part; they already overshoot
 the surface they cross. The others are finished solids.
 
-**A thread must never take part in a boolean.** Not \`subtract(bloco, roscaMetrica(...))\`, not
-\`union(cabeca, roscaMetrica(...))\` — the CSG kernel tears the mesh open on the helix, in both
-directions, at every resolution. So:
-  - bolt or screw          → \`parafusoSextavado\` (complete part, no boolean)
-  - nut                    → \`porcaRoscada\` (complete part, no boolean)
-  - threaded hole in a part you designed → \`furoInserto\` (heat-set insert). This is the right
-    answer for FDM anyway: a small printed internal thread strips, a brass insert does not.
-If the user insists on a printed threaded hole in a custom part, say plainly in \`printNotes\` that
-it is not reliable here and offer the insert instead.
+For a threaded hole, prefer \`furoInserto\` at M2-M4 and say why in \`printNotes\`: a printed internal
+thread that small strips after a few tightenings, while a brass insert does not. From M5 up,
+\`furoRoscado\` is a reasonable printed option.
 
 - Signatures that matter (get these exactly right):
   cuboid({ size: [x, y, z] })                       // centred at origin
@@ -99,8 +96,9 @@ it is not reliable here and offer the insert instead.
 1. Millimetres everywhere. Z is up.
 2. The finished part MUST rest on the build plate: its lowest point sits exactly at z = 0.
    Primitives are centred at the origin, so translate up by half the height.
-3. Cuts must fully pierce the material. Make cutting tools ~0.2 mm longer on each side than the
-   wall they cross, otherwise coplanar faces produce broken (non-manifold) STL.
+3. Make cutting tools ~0.5 mm longer on each side than the wall they cross. The boolean kernel
+   handles coplanar faces correctly, so this no longer breaks the mesh — but a cut that ends
+   exactly flush leaves a zero-thickness film the slicer may or may not print.
 4. Never leave zero-thickness or self-intersecting geometry. Do not subtract a shape that exactly
    matches a face.
 5. Use \`segments: 64\` for visible cylinders and holes (32 is enough for small internal features).

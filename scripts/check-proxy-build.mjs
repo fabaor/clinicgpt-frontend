@@ -16,7 +16,13 @@ import { fileURLToPath } from 'node:url'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const DIST = join(ROOT, 'dist')
 const PROXY_PATH = '/api/gerar'
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' }
+const TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  // Sem este, o navegador recusa a compilação em streaming do WASM.
+  '.wasm': 'application/wasm',
+}
 
 function findChromium() {
   const root = process.env.PLAYWRIGHT_BROWSERS_PATH

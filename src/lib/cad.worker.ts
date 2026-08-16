@@ -1,7 +1,9 @@
 /// <reference lib="webworker" />
 import stlSerializerModule from '@jscad/stl-serializer'
 import { jscad } from './jscadRuntime'
+import { carregarManifold } from './manifoldRuntime'
 import { STANDARD_PARTS } from './standardParts'
+import type { ManifoldOps } from './manifoldOps'
 import type { BuildStats, BuildWarning, PrinterProfile } from '../types'
 
 const stlSerializer = ((stlSerializerModule as { default?: typeof stlSerializerModule })
@@ -29,6 +31,9 @@ type Request = BuildRequest | ExportRequest
 /** Última peça construída, guardada para exportar sem recalcular. */
 let current: Geom3 | null = null
 
+/** Booleanos do Manifold, prontos depois que o WASM carrega. */
+let ops: ManifoldOps | null = null
+
 /** Nomes da API JSCAD injetados no escopo do código gerado. */
 const SCOPE: Record<string, unknown> = {
   ...jscad.primitives,
@@ -50,10 +55,11 @@ const SCOPE: Record<string, unknown> = {
   TAU: Math.PI * 2,
 }
 
-self.onmessage = (event: MessageEvent<Request>) => {
+self.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data
   try {
-    if (request.type === 'build') handleBuild(request)
+    if (!ops) ops = await carregarManifold()
+    if (request.type === 'build') handleBuild(request, ops)
     else handleExport(request)
   } catch (error) {
     self.postMessage({
@@ -64,20 +70,26 @@ self.onmessage = (event: MessageEvent<Request>) => {
   }
 }
 
-function handleBuild(request: BuildRequest) {
-  const geometry = evaluate(request.code, request.params)
-  current = geometry
+function handleBuild(request: BuildRequest, ops: ManifoldOps) {
+  try {
+    const geometry = evaluate(request.code, request.params, ops)
+    current = geometry
 
-  const polygons = jscad.geometries.geom3.toPolygons(geometry)
-  if (polygons.length === 0) {
-    throw new Error('O código rodou mas não produziu nenhum sólido.')
+    const polygons = jscad.geometries.geom3.toPolygons(geometry)
+    if (polygons.length === 0) {
+      throw new Error('O código rodou mas não produziu nenhum sólido.')
+    }
+
+    const positions = triangulate(polygons)
+    const stats = measure(geometry, positions.length / 9, request.density)
+    const warnings = inspect(geometry, stats, polygons, request.printer, ops)
+
+    self.postMessage({ type: 'built', id: request.id, positions, stats, warnings }, [positions.buffer])
+  } finally {
+    // O WASM não tem coletor de lixo: o que foi alocado nesta construção sai
+    // agora, senão a memória do worker cresce a cada mexida num parâmetro.
+    ops.liberar()
   }
-
-  const positions = triangulate(polygons)
-  const stats = measure(geometry, positions.length / 9, request.density)
-  const warnings = inspect(geometry, stats, polygons, request.printer)
-
-  self.postMessage({ type: 'built', id: request.id, positions, stats, warnings }, [positions.buffer])
 }
 
 function handleExport(request: ExportRequest) {
@@ -86,9 +98,21 @@ function handleExport(request: ExportRequest) {
   self.postMessage({ type: 'exported', id: request.id, parts, binary: request.binary })
 }
 
-function evaluate(code: string, params: Record<string, number | boolean>): Geom3 {
-  const names = Object.keys(SCOPE)
-  const values = names.map((name) => SCOPE[name])
+function evaluate(
+  code: string,
+  params: Record<string, number | boolean>,
+  ops: ManifoldOps,
+): Geom3 {
+  // Os booleanos do Manifold entram por cima dos do JSCAD. O código gerado
+  // continua chamando union/subtract/intersect com a mesma assinatura.
+  const escopo: Record<string, unknown> = {
+    ...SCOPE,
+    union: ops.union,
+    subtract: ops.subtract,
+    intersect: ops.intersect,
+  }
+  const names = Object.keys(escopo)
+  const values = names.map((name) => escopo[name])
 
   // O código gerado é executado com a API JSCAD no escopo e nada mais: sem
   // import/require, sem DOM, sem rede — o worker não tem acesso a nenhum deles.
@@ -167,6 +191,7 @@ function inspect(
   stats: BuildStats,
   polygons: Polygon[],
   printer: PrinterProfile,
+  ops: ManifoldOps,
 ): BuildWarning[] {
   const warnings: BuildWarning[] = []
   const [x, y, z] = stats.dimensions
@@ -208,7 +233,7 @@ function inspect(
     })
   }
 
-  const partes = countLooseParts(geometry, polygons)
+  const partes = countLooseParts(geometry, ops)
   if (partes > 1) {
     warnings.push({
       level: 'atencao',
@@ -231,12 +256,12 @@ function inspect(
 /**
  * Quantos sólidos desconexos a peça tem. Mais de um quase sempre é engano: um
  * corte comeu material demais e separou as partes, o que só se descobre depois
- * de fatiar. O scission é caro, então só roda em malhas de tamanho moderado.
+ * de fatiar. O decompose do Manifold faz isso em tempo linear, sem o limite de
+ * tamanho que o scission do JSCAD obrigava.
  */
-function countLooseParts(geometry: Geom3, polygons: Polygon[]): number {
-  if (polygons.length > 20_000) return 1
+function countLooseParts(geometry: Geom3, ops: ManifoldOps): number {
   try {
-    return jscad.booleans.scission(geometry).length
+    return ops.contarPartes(geometry)
   } catch {
     return 1
   }
