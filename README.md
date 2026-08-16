@@ -11,7 +11,7 @@ código JSCAD parametrizado  →  sólido fechado  →  peca.stl
 ## Como funciona
 
 O modelo não desenha triângulos — ele escreve **código paramétrico**, que o app executa. Isso muda
-tudo na prática: o resultado sai sempre fechado (o CSG garante), você ajusta as medidas por sliders
+tudo na prática: o resultado sai sempre fechado (o kernel de booleanos garante), você ajusta as medidas por sliders
 sem gastar outra chamada de API, e dá para ler e corrigir o que foi feito.
 
 1. Sua descrição vai para a API da Anthropic com um prompt de engenharia de CAD: milímetros, Z para
@@ -146,7 +146,6 @@ gera a geometria da norma, e `npm run test:parts` confere cada cota contra a tab
 | `roscaMetrica({ diametro, altura })` | Barra roscada nua |
 | `engrenagemReta({ modulo, dentes, largura })` | Engrenagem de perfil evolvente |
 | `bolsaPorca`, `furoParafuso`, `furoInserto` | Ferramentas de corte para subtrair |
-
 | `furoRoscado({ tamanho, profundidade, folga })` | Ferramenta para abrir rosca fêmea |
 
 ### Por que rosca é poliedro e não montagem
