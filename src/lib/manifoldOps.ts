@@ -43,8 +43,11 @@ export type ManifoldOps = {
   union: (...args: unknown[]) => Geometry
   subtract: (...args: unknown[]) => Geometry
   intersect: (...args: unknown[]) => Geometry
-  /** Quantos sólidos desconexos a peça tem. */
-  contarPartes: (geom: Geom3) => number
+  /**
+   * Quantos sólidos desconexos a peça tem, ou `null` quando o kernel não
+   * consegue analisar a malha — auto-intersecção ou superfície aberta.
+   */
+  contarPartes: (geom: Geom3) => number | null
   /** Libera tudo que foi alocado no WASM. Chame ao fim de cada construção. */
   liberar: () => void
 }
@@ -178,10 +181,16 @@ export function createManifoldOps(wasm: ManifoldWasm): ManifoldOps {
     intersect: (...args) => operar('intersect', args),
 
     contarPartes: (geom) => {
-      const partes = paraManifold(geom).decompose()
-      const total = partes.length
-      for (const parte of partes) parte.delete()
-      return Math.max(1, total)
+      try {
+        const partes = paraManifold(geom).decompose()
+        const total = partes.length
+        for (const parte of partes) parte.delete()
+        return Math.max(1, total)
+      } catch {
+        // Malha que o Manifold recusa não é "uma peça saudável": é uma peça que
+        // não dá para analisar. Devolver 1 aqui viraria falso alívio.
+        return null
+      }
     },
 
     liberar: () => {

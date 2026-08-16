@@ -69,7 +69,8 @@ function conferir(nome, construir, esperado = {}) {
 
   const problemas = []
   if (fuga > 1e-4) problemas.push(`malha aberta (${fuga.toExponential(1)})`)
-  if (partes !== 1) problemas.push(`${partes} pedaços soltos`)
+  if (partes === null) problemas.push('malha não analisável pelo kernel')
+  else if (partes !== 1) problemas.push(`${partes} pedaços soltos`)
   if (volume <= 0) problemas.push(`volume ${volume.toFixed(1)}`)
   if (esperado.volumeMin && volume < esperado.volumeMin) {
     problemas.push(`volume ${volume.toFixed(0)} abaixo do mínimo ${esperado.volumeMin}`)
@@ -156,6 +157,38 @@ conferir('dois blocos apenas encostados', () =>
     translate([0, 0, 15], cuboid({ size: [20, 20, 10] })),
   ),
 )
+
+console.log('\nMalha que o kernel não analisa precisa ser reportada como tal')
+{
+  // O BSP do JSCAD deixa T-junctions no resultado 3D: parece fechado pelo teste
+  // de normais, mas topologicamente não é manifold. Antes isto virava "1 peça" —
+  // falso alívio bem na hora de decidir imprimir.
+  const comTJunction = jscad.booleans.subtract(
+    translate([0, 0, 5], cuboid({ size: [20, 20, 10] })),
+    translate([0, 0, 5], cylinder({ radius: 4, height: 14, segments: 48 })),
+  )
+
+  const resultado = ops.contarPartes(comTJunction)
+  if (resultado === null) {
+    console.log('  ok    malha com T-junction devolve null, não 1')
+  } else {
+    falhas++
+    console.log(`  FALHA malha com T-junction devolveu ${resultado} em vez de null`)
+  }
+
+  // E o caminho saudável segue respondendo o número certo.
+  const separados = jscad.geometries.geom3.create([
+    ...jscad.geometries.geom3.toPolygons(translate([0, 0, 5], cuboid({ size: [20, 20, 10] }))),
+    ...jscad.geometries.geom3.toPolygons(translate([40, 0, 5], cuboid({ size: [20, 20, 10] }))),
+  ])
+  const dois = ops.contarPartes(separados)
+  if (dois === 2) {
+    console.log('  ok    dois sólidos separados contam como 2')
+  } else {
+    falhas++
+    console.log(`  FALHA esperava 2 peças separadas, veio ${dois}`)
+  }
+}
 
 ops.liberar()
 

@@ -67,14 +67,15 @@ for (const example of EXAMPLES) {
       const leak = measureLeak(polys)
       const bytes = stlSerializer.serialize({ binary: true }, geometry).reduce((s, b) => s + (b.byteLength ?? b.length), 0)
       const dims = [max[0] - min[0], max[1] - min[1], max[2] - min[2]].map((d) => d.toFixed(1)).join(' x ')
-      const partes = ops.contarPartes(geometry)
+      // null = o kernel não conseguiu analisar; conta como problema.
+      const partes = ops.contarPartes(geometry) ?? 0
       const aberta = leak > 1e-4
       const zForaDaMesa = Math.abs(min[2]) > 0.05
-      if (aberta || zForaDaMesa || partes > 1) failures++
+      if (aberta || zForaDaMesa || partes !== 1) failures++
       const flags =
         (aberta ? ' ** MALHA ABERTA **' : '') +
         (zForaDaMesa ? ` ** minZ=${min[2].toFixed(2)} **` : '') +
-        (partes > 1 ? ` ** ${partes} PEDACOS SOLTOS **` : '')
+        (partes === 0 ? ' ** MALHA NAO ANALISAVEL **' : partes > 1 ? ` ** ${partes} PEDACOS SOLTOS **` : '')
       console.log(`OK   ${example.name} [${caseName}] ${dims} mm | ${polys.length} pol | vazamento ${leak.toExponential(1)}${flags} | ${(bytes / 1024).toFixed(0)} KB | ${Date.now() - t0}ms`)
     } catch (error) {
       failures++

@@ -201,7 +201,7 @@ console.log('\nO código gerado constrói um sólido com o volume certo')
   conferir('volume (mm³)', volume, areaLiquida(traco.contornos) * espessura, 200)
   conferir('largura (mm)', max[0] - min[0], 200, 3)
   conferir('espessura (mm)', max[2] - min[2], espessura, 0.01)
-  conferir('partes soltas', ops.contarPartes(geometria), 1, 0)
+  conferir('partes soltas', ops.contarPartes(geometria) ?? 0, 1, 0)
 
   let sx = 0, sy = 0, sz = 0, area = 0
   for (const p of poligonos) {
@@ -233,7 +233,7 @@ console.log('\nO código gerado constrói um sólido com o volume certo')
   conferir('altura com placa (mm)', pmax[2] - pmin[2], espessura + 2, 0.02)
   conferir('base em z=0', pmin[2], 0, 0.02)
   conferir('placa mais larga que a peça', pmax[0] - pmin[0], 306, 4)
-  conferir('partes com placa', ops.contarPartes(comPlaca), 1, 0)
+  conferir('partes com placa', ops.contarPartes(comPlaca) ?? 0, 1, 0)
 }
 
 ops.liberar()

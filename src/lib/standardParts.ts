@@ -3,10 +3,24 @@
 import { jscad } from './jscadRuntime.ts'
 import type { Geom3 } from './jscadRuntime.ts'
 
-const { cylinder, cuboid, polygon, polyhedron } = jscad.primitives
-const { extrudeLinear } = jscad.extrusions
-const { union, subtract } = jscad.booleans
+const { circle, cylinder, polygon, polyhedron, rectangle } = jscad.primitives
+const { extrudeLinear, extrudeRotate } = jscad.extrusions
 const { translate } = jscad.transforms
+
+/**
+ * Booleanos SEMPRE em 2D, nunca em 3D.
+ *
+ * O BSP do JSCAD deixa T-junctions no resultado 3D: a malha parece fechada pelo
+ * teste de normais, mas o Manifold a recusa como não-manifold — e aí a peça não
+ * entra em nenhum booleano depois. Em polígono plano o BSP é confiável, então
+ * cada peça faz o recorte no perfil e extruda em seguida.
+ *
+ * (Este módulo não pode usar os booleanos do Manifold: eles são injetados no
+ * escopo do worker, e as peças normalizadas precisam funcionar sem esse
+ * contexto — inclusive nos testes.)
+ */
+const subtract2D = jscad.booleans.subtract as (...itens: unknown[]) => ReturnType<typeof rectangle>
+const union2D = jscad.booleans.union as (...itens: unknown[]) => ReturnType<typeof rectangle>
 
 /**
  * Peças normalizadas. Existem porque um modelo improvisando rosca ou dente de
@@ -394,13 +408,11 @@ export function engrenagemReta(options: EngrenagemOptions): Geom3 {
     pontos.push([raioDedendo * Math.cos(proximo - meioDente - vao), raioDedendo * Math.sin(proximo - meioDente - vao)])
   }
 
-  const corpo = extrudeLinear({ height: largura }, polygon({ points: pontos }))
-  if (furo <= 0) return corpo
+  const perfil = polygon({ points: pontos })
+  const comFuro =
+    furo > 0 ? subtract2D(perfil, circle({ radius: furo / 2, segments: 48 })) : perfil
 
-  return subtract(
-    corpo,
-    translate([0, 0, -1], cylinder({ radius: furo / 2, height: largura + 2, segments: 48 })),
-  )
+  return extrudeLinear({ height: largura }, comFuro)
 }
 
 export type BolsaPorcaOptions = {
@@ -430,14 +442,16 @@ export function bolsaPorca(options: BolsaPorcaOptions): Geom3 {
   // medida entre faces, e o raio pedido é o de vértice.
   const raio = chave / Math.sqrt(3)
 
-  const bolsa = translate(
-    [0, 0, altura / 2],
-    cylinder({ radius: raio, height: altura, segments: 6 }),
-  )
+  const sextavado = circle({ radius: raio, segments: 6 })
+  const perfil =
+    canal > 0
+      ? union2D(
+          sextavado,
+          jscad.transforms.translate([canal / 2, 0], rectangle({ size: [canal, chave] })),
+        )
+      : sextavado
 
-  if (canal <= 0) return bolsa
-
-  return union(bolsa, translate([canal / 2, 0, altura / 2], cuboid({ size: [canal, chave, altura] })))
+  return extrudeLinear({ height: altura }, perfil)
 }
 
 export type FuroParafusoOptions = {
@@ -461,20 +475,36 @@ export function furoParafuso(options: FuroParafusoOptions): Geom3 {
   const dados = CABECA[tamanho]
   if (!dados) throw new Error(`Não tenho o parafuso M${tamanho} na tabela.`)
 
-  const passante = translate(
-    [0, 0, profundidade / 2],
-    cylinder({ radius: (tamanho + folga) / 2, height: profundidade + 2, segments: 48 }),
-  )
+  const raioHaste = (tamanho + folga) / 2
+  const base = -1
+  const topo = profundidade + 1
 
-  if (cabeca === 'passante') return passante
+  if (cabeca === 'passante') {
+    return translate(
+      [0, 0, (base + topo) / 2],
+      cylinder({ radius: raioHaste, height: topo - base, segments: 48 }),
+    )
+  }
 
+  // Cilindro escalonado como sólido de revolução: o perfil é (raio, altura), e
+  // extrudeRotate o gira em torno de Z. Sem booleano, sem T-junction.
   const alturaRebaixo = options.alturaRebaixo ?? dados.altura + 0.2
-  const rebaixo = translate(
-    [0, 0, profundidade - alturaRebaixo / 2 + 0.5],
-    cylinder({ radius: (dados.diametro + folga) / 2, height: alturaRebaixo + 1, segments: 48 }),
-  )
+  const raioCabeca = (dados.diametro + folga) / 2
+  const degrau = profundidade - alturaRebaixo + 0.5
 
-  return union(passante, rebaixo)
+  return extrudeRotate(
+    { segments: 48 },
+    polygon({
+      points: [
+        [0, base],
+        [raioHaste, base],
+        [raioHaste, degrau],
+        [raioCabeca, degrau],
+        [raioCabeca, topo],
+        [0, topo],
+      ],
+    }),
+  )
 }
 
 export type FuroInsertoOptions = {

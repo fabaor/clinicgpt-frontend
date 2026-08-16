@@ -275,7 +275,15 @@ function inspect(
   }
 
   const partes = countLooseParts(geometry, ops)
-  if (partes > 1) {
+  if (partes === null) {
+    warnings.push({
+      level: 'atencao',
+      message:
+        'Não consegui analisar a malha: ela se auto-intersecta ou tem superfície aberta. ' +
+        'Em peça importada isso é comum; em peça gerada, costuma ser sólido sobrepondo sólido. ' +
+        'O fatiador pode recusar o arquivo — vale reparar a malha antes de imprimir.',
+    })
+  } else if (partes > 1) {
     warnings.push({
       level: 'atencao',
       message:
@@ -295,17 +303,12 @@ function inspect(
 }
 
 /**
- * Quantos sólidos desconexos a peça tem. Mais de um quase sempre é engano: um
- * corte comeu material demais e separou as partes, o que só se descobre depois
- * de fatiar. O decompose do Manifold faz isso em tempo linear, sem o limite de
- * tamanho que o scission do JSCAD obrigava.
+ * Quantos sólidos desconexos a peça tem, ou `null` quando não dá para saber.
+ * Mais de um quase sempre é engano: um corte comeu material demais e separou as
+ * partes, o que só se descobre depois de fatiar.
  */
-function countLooseParts(geometry: Geom3, ops: ManifoldOps): number {
-  try {
-    return ops.contarPartes(geometry)
-  } catch {
-    return 1
-  }
+function countLooseParts(geometry: Geom3, ops: ManifoldOps): number | null {
+  return ops.contarPartes(geometry)
 }
 
 /**

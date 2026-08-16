@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "proxy": "node server/proxy.mjs",
+    "demo": "node --experimental-strip-types scripts/demo.mjs",
     "test:parts": "node --experimental-strip-types scripts/check-standard-parts.mjs",
     "test:manifold": "node --experimental-strip-types scripts/check-manifold.mjs",
     "test:trace": "node --experimental-strip-types scripts/check-trace.mjs",

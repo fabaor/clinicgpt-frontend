@@ -5,6 +5,8 @@
  * Uso: node --experimental-strip-types scripts/check-standard-parts.mjs
  */
 import { createRequire } from 'node:module'
+import ManifoldModule from 'manifold-3d'
+import { createManifoldOps } from '../src/lib/manifoldOps.ts'
 import {
   bolsaPorca,
   engrenagemReta,
@@ -17,6 +19,13 @@ import {
 
 const require = createRequire(import.meta.url)
 const jscad = require('@jscad/modeling')
+
+// A contagem de partes usa o mesmo kernel do app. Com o scission do JSCAD, uma
+// peça que o Manifold recusa passava como saudável — foi assim que a engrenagem
+// com furo e o furo rebaixado escaparam.
+const wasm = await ManifoldModule()
+wasm.setup()
+const ops = createManifoldOps(wasm)
 
 let falhas = 0
 
@@ -39,7 +48,7 @@ function medir(geometria) {
     volume: jscad.measurements.measureVolume(geometria),
     poligonos: poligonos.length,
     vazamento: vazamento(poligonos),
-    pedacos: poligonos.length > 20000 ? 1 : jscad.booleans.scission(geometria).length,
+    pedacos: ops.contarPartes(geometria),
   }
 }
 
@@ -78,7 +87,10 @@ function conferirSaude(nome, m, { apoiada = true } = {}) {
     falhas++
     console.log(`  FALHA ${nome}: malha aberta (${m.vazamento.toExponential(1)})`)
   }
-  if (m.pedacos > 1) {
+  if (m.pedacos === null) {
+    falhas++
+    console.log(`  FALHA ${nome}: o kernel de booleanos não analisa esta malha`)
+  } else if (m.pedacos > 1) {
     falhas++
     console.log(`  FALHA ${nome}: ${m.pedacos} pedaços soltos`)
   }
@@ -177,6 +189,8 @@ for (const [tamanho, furoEsperado] of [[3, 4], [4, 5.6], [5, 6.4]]) {
   conferir(`M${tamanho} ⌀ do furo`, m.dim[0], furoEsperado, 0.02)
   conferirSaude(`inserto M${tamanho}`, m, { apoiada: false })
 }
+
+ops.liberar()
 
 console.log(
   falhas === 0
