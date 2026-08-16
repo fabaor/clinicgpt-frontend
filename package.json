@@ -1,0 +1,33 @@
+{
+  "name": "stl-generator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Gerador de STL para impressão 3D a partir de descrições em linguagem natural",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "proxy": "node server/proxy.mjs",
+    "test:examples": "node --experimental-strip-types scripts/check-examples.mjs",
+    "test:smoke": "npm run build && node scripts/smoke.mjs",
+    "test": "npm run test:examples && npm run test:smoke"
+  },
+  "dependencies": {
+    "@jscad/modeling": "^2.13.0",
+    "@jscad/stl-serializer": "^2.1.23",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "playwright": "^1.62.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  }
+}
