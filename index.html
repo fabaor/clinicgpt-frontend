@@ -86,6 +86,20 @@
     .visao ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;text-align:left}
     .visao li{padding:16px 18px;border-left:3px solid var(--gold);background:var(--sand);border-radius:0 12px 12px 0;font-size:.98rem}
 
+    /* EQUIPE */
+    .equipe .intro{max-width:760px;margin:0 auto 64px;text-align:center}
+    .equipe .intro h2{font-size:clamp(1.8rem,3.5vw,2.5rem);color:var(--green);margin-bottom:20px;text-wrap:balance}
+    .equipe-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px;align-items:center;max-width:1000px;margin:0 auto}
+    .equipe-foto{position:relative}
+    .equipe-foto::before{content:"";position:absolute;inset:22px -22px -22px 22px;border:1px solid var(--gold);border-radius:var(--radius)}
+    .equipe-foto img{position:relative;display:block;width:100%;height:auto;border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,58,52,.16)}
+    .equipe-foto figcaption{position:relative;margin-top:18px;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+    .equipe-lista{display:grid;gap:32px}
+    .membro{display:grid;gap:6px;padding-left:24px;border-left:2px solid var(--sand-2)}
+    .membro .atua{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:600}
+    .membro h3{font-size:clamp(1.25rem,2.2vw,1.5rem);color:var(--green)}
+    .membro p{color:var(--muted);font-size:1rem;line-height:1.5}
+
     /* PROMESSA */
     .promessa{background:var(--green);color:var(--sand);position:relative;overflow:hidden}
     .promessa::before{content:"";position:absolute;width:600px;height:600px;border-radius:50%;border:1px solid rgba(201,166,107,.15);top:-200px;right:-200px}
@@ -143,6 +157,9 @@
       .final .tres{flex-direction:column;gap:6px}
       .final .tres span+span::before{content:none}
       .hero{padding:110px 0 90px}
+      .equipe-wrap{grid-template-columns:1fr;gap:40px}
+      .equipe-foto{max-width:420px;margin:0 auto}
+      .equipe-foto::before{content:none}
     }
   </style>
 </head>
@@ -215,6 +232,43 @@
         <li>Suas dúvidas são explicadas.</li>
       </ul>
       <p class="lead" style="margin-top:32px">E diferentes informações sobre sua saúde são <strong>conectadas</strong> para que você compreenda melhor o seu processo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- EQUIPE -->
+<section class="equipe" id="equipe">
+  <div class="container">
+    <div class="intro reveal">
+      <span class="eyebrow">A equipe</span>
+      <h2>Quem conduz a sua experiência 360°.</h2>
+      <p class="lead">Três especialistas na mesma sala, olhando para você ao mesmo tempo — cada um cuidando de um pilar do método.</p>
+    </div>
+
+    <div class="equipe-wrap">
+      <figure class="equipe-foto reveal">
+        <img src="assets/equipe-motivation-360.jpg" width="960" height="1280"
+             alt="Greg Gonçalves, Dra. Bruna Leal e Dr. Fábio Rieger lado a lado no consultório.">
+        <figcaption>Da esquerda para a direita</figcaption>
+      </figure>
+
+      <div class="equipe-lista">
+        <div class="membro reveal">
+          <span class="atua">Fisiologia</span>
+          <h3>Greg Gonçalves</h3>
+          <p>Educador físico e fisiologista</p>
+        </div>
+        <div class="membro reveal">
+          <span class="atua">Nutrição</span>
+          <h3>Dra. Bruna Leal</h3>
+          <p>Nutricionista</p>
+        </div>
+        <div class="membro reveal">
+          <span class="atua">Nutrologia</span>
+          <h3>Dr. Fábio Rieger</h3>
+          <p>Médico</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
