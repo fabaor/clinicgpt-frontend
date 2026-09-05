@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Método Motivation 360 | Entenda seu corpo. Conecte os sinais.</title>
+  <meta name="description" content="Em cerca de 2 horas, tenha uma visão 360° da sua saúde com Nutrologia + Nutrição + Fisiologia e saia com uma estratégia personalizada.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --green:#1f3a34;
+      --green-dark:#152b27;
+      --sand:#f6f1ea;
+      --sand-2:#ede5d9;
+      --gold:#c9a66b;
+      --gold-light:#e6d3ac;
+      --text:#2b2b2b;
+      --muted:#6b6b6b;
+      --white:#ffffff;
+      --radius:18px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--text);background:var(--sand);line-height:1.7;-webkit-font-smoothing:antialiased}
+    img{max-width:100%}
+    h1,h2,h3,.serif{font-family:'Playfair Display',Georgia,'Times New Roman',serif;line-height:1.15;font-weight:600}
+    .container{width:min(1120px,92%);margin:0 auto}
+    section{padding:96px 0}
+    .eyebrow{display:inline-block;letter-spacing:.22em;text-transform:uppercase;font-size:.75rem;font-weight:600;color:var(--gold);margin-bottom:18px}
+    .btn{display:inline-block;padding:18px 36px;border-radius:999px;background:var(--gold);color:var(--green-dark);font-weight:600;text-decoration:none;letter-spacing:.02em;transition:transform .2s,box-shadow .2s,background .2s;box-shadow:0 10px 30px rgba(201,166,107,.35)}
+    .btn:hover{transform:translateY(-2px);background:var(--gold-light)}
+    .btn:focus-visible{outline:2px solid var(--gold-light);outline-offset:4px}
+    .btn-outline{background:transparent;color:var(--sand);border:1.5px solid rgba(255,255,255,.4);box-shadow:none}
+    .btn-outline:hover{background:rgba(255,255,255,.08)}
+    .center{text-align:center}
+    .lead{font-size:1.15rem;color:var(--muted);max-width:680px;margin:0 auto}
+
+    /* reveal */
+    .reveal{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s ease}
+    .reveal.in{opacity:1;transform:none}
+    @media (prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      .reveal{opacity:1;transform:none;transition:none}
+      .btn{transition:none}
+    }
+
+    /* HERO */
+    .hero{position:relative;background:var(--green);color:var(--sand);padding:140px 0 120px;overflow:hidden}
+    .hero::before{content:"";position:absolute;inset:0;background:
+      radial-gradient(circle at 80% 20%,rgba(201,166,107,.18),transparent 45%),
+      radial-gradient(circle at 10% 90%,rgba(201,166,107,.12),transparent 40%)}
+    .hero .container{position:relative;max-width:820px;text-align:center}
+    .hero h1{font-size:clamp(2.2rem,5.5vw,4rem);margin-bottom:28px;text-wrap:balance}
+    .hero h1 em{font-style:italic;color:var(--gold-light)}
+    .hero p{font-size:1.15rem;color:rgba(246,241,234,.8);max-width:600px;margin:0 auto 40px}
+    .hero .badge{display:inline-flex;align-items:center;gap:10px;padding:8px 18px;border:1px solid rgba(201,166,107,.5);border-radius:999px;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:32px;color:var(--gold-light)}
+    .hero .badge span{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+    .scroll-hint{margin-top:64px;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;opacity:.5}
+
+    /* SINTOMAS */
+    .sintomas h2{font-size:clamp(1.8rem,3.5vw,2.6rem);color:var(--green);max-width:720px;margin:0 auto 56px;text-wrap:balance}
+    .grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+    .card{background:var(--white);border-radius:var(--radius);padding:32px 30px;border:1px solid rgba(31,58,52,.06);box-shadow:0 8px 30px rgba(31,58,52,.05);display:flex;gap:18px;align-items:flex-start}
+    .card .ic{flex:none;width:44px;height:44px;border-radius:12px;background:var(--sand-2);display:grid;place-items:center;color:var(--green)}
+    .card p{font-size:1.02rem;color:var(--text)}
+    .frustra{margin:64px auto 0;max-width:820px;background:var(--green);color:var(--sand);border-radius:var(--radius);padding:56px 48px;position:relative}
+    .frustra::after{content:"\201C";position:absolute;top:-10px;right:36px;font-family:'Playfair Display',Georgia,serif;font-size:9rem;color:var(--gold);opacity:.25;line-height:1}
+    .frustra .small{font-size:.9rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold-light);margin-bottom:14px}
+    .frustra h3{font-size:clamp(1.5rem,3vw,2.1rem);margin-bottom:28px;text-wrap:balance}
+    .frustra ul{list-style:none;display:grid;gap:10px;margin-bottom:28px;color:rgba(246,241,234,.85)}
+    .frustra li::before{content:"\2014";color:var(--gold);margin-right:12px}
+    .frustra p{color:rgba(246,241,234,.85);font-size:1.05rem}
+
+    /* MÉTODO */
+    .metodo{background:var(--white)}
+    .metodo h2{font-size:clamp(1.9rem,3.8vw,2.8rem);color:var(--green);max-width:820px;margin:0 auto 24px;text-wrap:balance}
+    .pilares{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin:64px 0 56px}
+    .pilar{padding:40px 32px;border-radius:var(--radius);background:var(--sand);text-align:center;position:relative}
+    .pilar .num{font-family:'Playfair Display',Georgia,serif;font-size:3rem;color:var(--gold);line-height:1;margin-bottom:12px}
+    .pilar h3{font-size:1.35rem;color:var(--green);margin-bottom:10px}
+    .pilar p{color:var(--muted);font-size:.95rem}
+    .visao{max-width:760px;margin:0 auto;text-align:center}
+    .visao .big{font-family:'Playfair Display',Georgia,serif;font-size:clamp(1.6rem,3vw,2.2rem);color:var(--green);margin:16px 0 36px}
+    .visao ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;text-align:left}
+    .visao li{padding:16px 18px;border-left:3px solid var(--gold);background:var(--sand);border-radius:0 12px 12px 0;font-size:.98rem}
+
+    /* PROMESSA */
+    .promessa{background:var(--green);color:var(--sand);position:relative;overflow:hidden}
+    .promessa::before{content:"";position:absolute;width:600px;height:600px;border-radius:50%;border:1px solid rgba(201,166,107,.15);top:-200px;right:-200px}
+    .promessa::after{content:"";position:absolute;width:400px;height:400px;border-radius:50%;border:1px solid rgba(201,166,107,.12);bottom:-150px;left:-100px}
+    .promessa .container{position:relative;max-width:860px;text-align:center}
+    .promessa h2{font-size:clamp(1.7rem,3.6vw,2.6rem);font-weight:500;margin-bottom:56px;text-wrap:balance}
+    .promessa h2 strong{color:var(--gold-light);font-weight:600}
+    .naoprecisa{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:0 0 40px}
+    .naoprecisa div{padding:20px 14px;border:1px solid rgba(255,255,255,.15);border-radius:14px;font-size:.95rem;position:relative;color:rgba(246,241,234,.75)}
+    .naoprecisa div::before{content:"\2715";display:block;color:var(--gold);font-size:.8rem;margin-bottom:6px}
+    .promessa .talvez{font-size:1.1rem;color:rgba(246,241,234,.8);margin-bottom:12px}
+    .promessa .pergunta{font-family:'Playfair Display',Georgia,serif;font-size:clamp(2rem,5vw,3.4rem);font-style:italic;color:var(--gold-light);text-wrap:balance}
+
+    /* CLAREZA */
+    .clareza .intro{max-width:720px;margin:0 auto 64px;text-align:center}
+    .clareza .intro h2{font-size:clamp(1.8rem,3.5vw,2.5rem);color:var(--green);margin-bottom:20px;text-wrap:balance}
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:80px}
+    .step{background:var(--white);border-radius:var(--radius);padding:28px 24px;border-top:3px solid var(--gold)}
+    .step span{font-size:.75rem;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;display:block;margin-bottom:10px}
+    .step p{font-weight:500;color:var(--green)}
+    .beneficios{background:var(--green);border-radius:28px;padding:64px 48px;color:var(--sand);display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center}
+    .beneficios h3{font-size:clamp(1.5rem,3vw,2.1rem);margin-bottom:18px;text-wrap:balance}
+    .beneficios p{color:rgba(246,241,234,.8)}
+    .beneficios ul{list-style:none;display:grid;gap:12px}
+    .beneficios li{display:flex;gap:14px;align-items:center;padding:14px 18px;background:rgba(255,255,255,.05);border-radius:12px;font-size:.98rem}
+    .beneficios li::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;background:var(--gold)}
+    .beneficios .quote{margin-top:28px;padding-top:24px;border-top:1px solid rgba(255,255,255,.12);font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:1.15rem;color:var(--gold-light)}
+
+    /* TRANSFORMAÇÃO */
+    .transf{background:var(--white);text-align:center}
+    .transf .antes{font-size:1.1rem;color:var(--muted);margin-bottom:14px}
+    .transf .fala{font-family:'Playfair Display',Georgia,serif;font-size:clamp(1.4rem,3vw,2rem);color:var(--muted);font-style:italic;margin-bottom:48px}
+    .transf .seta{width:1px;height:70px;background:linear-gradient(var(--gold),transparent);margin:0 auto 48px}
+    .transf .depois{font-size:1.1rem;color:var(--muted);margin-bottom:14px}
+    .transf .fala2{font-family:'Playfair Display',Georgia,serif;font-size:clamp(1.9rem,4.5vw,3.2rem);color:var(--green);max-width:900px;margin:0 auto;text-wrap:balance}
+    .transf .fala2 em{color:var(--gold)}
+
+    /* CTA FINAL */
+    .final{background:var(--green);color:var(--sand);text-align:center;padding:120px 0}
+    .final .container{max-width:760px}
+    .final .eyebrow{color:var(--gold-light)}
+    .final .tres{display:flex;justify-content:center;flex-wrap:wrap;gap:12px 36px;margin:28px 0 40px}
+    .final .tres span{font-family:'Playfair Display',Georgia,serif;font-size:clamp(1.2rem,2.5vw,1.6rem)}
+    .final .tres span+span::before{content:"\00B7";color:var(--gold);margin-right:36px}
+    .final p.strong{font-size:1.25rem;font-weight:500;margin-bottom:40px}
+    .final small{display:block;margin-top:22px;opacity:.6;font-size:.85rem}
+
+    footer{background:var(--green-dark);color:rgba(246,241,234,.5);text-align:center;padding:32px 0;font-size:.8rem}
+    footer strong{color:var(--gold-light);font-family:'Playfair Display',Georgia,serif;font-weight:500;letter-spacing:.05em}
+
+    @media (max-width:820px){
+      section{padding:72px 0}
+      .beneficios{grid-template-columns:1fr;padding:48px 28px}
+      .frustra{padding:44px 28px}
+      .final .tres{flex-direction:column;gap:6px}
+      .final .tres span+span::before{content:none}
+      .hero{padding:110px 0 90px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <div class="badge"><span></span> Método Motivation 360</div>
+    <h1>Você não precisa se acostumar <em>a viver cansada.</em></h1>
+    <p>Uma experiência integrada de aproximadamente 2 horas para você entender o que seu corpo está tentando dizer — e descobrir seu próximo passo.</p>
+    <a href="#agendar" class="btn">Quero entender meu corpo</a>
+    <div class="scroll-hint">↓ role para descobrir</div>
+  </div>
+</header>
+
+<!-- SINTOMAS -->
+<section class="sintomas">
+  <div class="container">
+    <div class="center reveal">
+      <span class="eyebrow">Isso soa familiar?</span>
+      <h2>Talvez você já tenha aceitado como “normal” coisas que não deveriam ser.</h2>
+    </div>
+
+    <div class="grid">
+      <div class="card reveal"><div class="ic">☾</div><p>Dormir e acordar cansada.</p></div>
+      <div class="card reveal"><div class="ic">☼</div><p>Sentir sono durante o dia.</p></div>
+      <div class="card reveal"><div class="ic">♡</div><p>Perceber que sua libido não é mais a mesma.</p></div>
+      <div class="card reveal"><div class="ic">∿</div><p>Conviver com o intestino desregulado.</p></div>
+      <div class="card reveal"><div class="ic">◐</div><p>Ter dificuldade para emagrecer.</p></div>
+      <div class="card reveal"><div class="ic">⚡</div><p>Sentir que falta energia e disposição para viver a rotina que você gostaria.</p></div>
+    </div>
+
+    <div class="frustra reveal">
+      <div class="small">E talvez o mais frustrante seja</div>
+      <h3>Não entender por que seu corpo não responde como antes.</h3>
+      <ul>
+        <li>Você tenta melhorar a alimentação.</li>
+        <li>Tenta voltar a treinar.</li>
+        <li>Tenta dormir melhor.</li>
+        <li>Tenta emagrecer.</li>
+      </ul>
+      <p>Mas continua com a sensação de que está tratando <strong>sintomas isolados</strong>, sem compreender o que realmente está acontecendo com você.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MÉTODO -->
+<section class="metodo" id="metodo">
+  <div class="container">
+    <div class="center reveal">
+      <span class="eyebrow">O método</span>
+      <h2>Seu corpo está dando sinais. O Método Motivation 360 foi criado para ajudar você a entendê-los.</h2>
+      <p class="lead">Uma experiência integrada de aproximadamente 2 horas, reunindo diferentes olhares sobre sua saúde para compreender seu momento atual e construir uma estratégia personalizada para os seus objetivos.</p>
+    </div>
+
+    <div class="pilares">
+      <div class="pilar reveal"><div class="num">01</div><h3>Nutrologia</h3><p>O olhar médico sobre seus sinais, sua história e o que merece atenção.</p></div>
+      <div class="pilar reveal"><div class="num">02</div><h3>Nutrição</h3><p>Como sua alimentação se conecta com energia, intestino, sono e composição corporal.</p></div>
+      <div class="pilar reveal"><div class="num">03</div><h3>Fisiologia</h3><p>Como seu corpo responde ao movimento e ao treino, e o que faz sentido para você.</p></div>
+    </div>
+
+    <div class="visao reveal">
+      <p class="lead">Não são apenas três profissionais olhando para você separadamente.</p>
+      <p class="big">É uma visão 360°.</p>
+      <ul>
+        <li>Sua história é ouvida.</li>
+        <li>Seus sintomas são considerados.</li>
+        <li>Seus hábitos e objetivos são avaliados.</li>
+        <li>Suas dúvidas são explicadas.</li>
+      </ul>
+      <p class="lead" style="margin-top:32px">E diferentes informações sobre sua saúde são <strong>conectadas</strong> para que você compreenda melhor o seu processo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROMESSA -->
+<section class="promessa">
+  <div class="container">
+    <span class="eyebrow reveal">A promessa</span>
+    <h2 class="reveal">Em cerca de 2 horas, tenha uma <strong>visão 360° da sua saúde</strong>, entenda melhor o que pode estar relacionado aos sinais que seu corpo vem apresentando e saia com uma <strong>estratégia personalizada</strong> para os seus próximos passos.</h2>
+
+    <p class="talvez reveal">Porque talvez você não precise simplesmente de:</p>
+    <div class="naoprecisa reveal">
+      <div>mais uma dieta</div>
+      <div>mais um treino</div>
+      <div>mais um suplemento</div>
+      <div>mais uma tentativa de emagrecer</div>
+    </div>
+
+    <p class="talvez reveal">Talvez o primeiro passo seja compreender melhor:</p>
+    <p class="pergunta reveal">O que o seu corpo está tentando dizer?</p>
+  </div>
+</section>
+
+<!-- CLAREZA -->
+<section class="clareza">
+  <div class="container">
+    <div class="intro reveal">
+      <span class="eyebrow">Clareza</span>
+      <h2>Quando existe clareza, você deixa de agir no escuro.</h2>
+    </div>
+
+    <div class="steps">
+      <div class="step reveal"><span>01</span><p>Você entende melhor seu ponto de partida.</p></div>
+      <div class="step reveal"><span>02</span><p>Entende o que merece atenção.</p></div>
+      <div class="step reveal"><span>03</span><p>Entende as estratégias recomendadas para você.</p></div>
+      <div class="step reveal"><span>04</span><p>Entende qual caminho seguir.</p></div>
+    </div>
+
+    <div class="beneficios reveal">
+      <div>
+        <h3>A partir dessa visão integrada, construímos uma estratégia que pode contribuir, conforme cada caso, para:</h3>
+        <p>Cuidar da saúde não deveria ser apenas correr atrás de um número na balança.</p>
+        <p class="quote">É buscar um corpo que funcione melhor para a vida que você quer viver.</p>
+      </div>
+      <ul>
+        <li>Mais energia e disposição</li>
+        <li>Melhor qualidade do sono</li>
+        <li>Melhor funcionamento intestinal</li>
+        <li>Bem-estar e qualidade de vida</li>
+        <li>Melhora da composição corporal</li>
+        <li>Performance física</li>
+        <li>Emagrecimento, quando esse for o objetivo</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSFORMAÇÃO -->
+<section class="transf">
+  <div class="container">
+    <span class="eyebrow reveal">A transformação</span>
+    <p class="antes reveal">Você pode chegar pensando:</p>
+    <p class="fala reveal">“Eu não sei mais o que fazer.”</p>
+    <div class="seta reveal"></div>
+    <p class="depois reveal">E queremos que saia pensando:</p>
+    <p class="fala2 reveal">“Agora eu entendo melhor o meu corpo. <em>Agora sei qual é o próximo passo.”</em></p>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="final" id="agendar">
+  <div class="container">
+    <span class="eyebrow reveal">Método Motivation 360</span>
+    <div class="tres reveal">
+      <span>Entenda seu corpo.</span>
+      <span>Conecte os sinais.</span>
+      <span>Descubra seu próximo passo.</span>
+    </div>
+    <p class="strong reveal">Seu corpo está dando sinais. É hora de começar a entendê-los.</p>
+    <div class="reveal">
+      <!-- TODO: substituir 55SEUNUMERO pelo número real do WhatsApp (formato: 5511999999999) -->
+      <a href="https://wa.me/55SEUNUMERO?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20o%20M%C3%A9todo%20Motivation%20360." class="btn" target="_blank" rel="noopener">Quero agendar minha experiência 360°</a>
+      <small>Vagas limitadas por agenda · Atendimento integrado de aproximadamente 2 horas</small>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <strong>MÉTODO MOTIVATION 360</strong><br>
+    Nutrologia · Nutrição · Fisiologia<br><br>
+    © <span id="ano"></span> Todos os direitos reservados. Este conteúdo tem caráter informativo e não substitui avaliação profissional individualizada.
+  </div>
+</footer>
+
+<script>
+  document.getElementById('ano').textContent = new Date().getFullYear();
+
+  var reveals = document.querySelectorAll('.reveal');
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (!('IntersectionObserver' in window) || reduced) {
+    reveals.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {threshold:.15});
+    reveals.forEach(function(el){ io.observe(el); });
+    // rede de segurança: se algo impedir o observer, o conteúdo aparece mesmo assim
+    setTimeout(function(){
+      reveals.forEach(function(el){
+        var r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('in');
+      });
+    }, 1200);
+  }
+</script>
+</body>
+</html>
